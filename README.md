@@ -134,7 +134,8 @@ Your own `.qpt` layout templates appear under **My Templates**; any template can
   the title row. Click a tab to open it for one use; a click in the map folds it away again.
 - **View › Maximize Map** hides every docked pane; click again to bring them back.
 - **View › Reset Panes** for Mapping, Editing or Geoprocessing, as in Pro.
-- The Quick Access row has New, Open, Save, Undo, Redo, **Toggle Editing** and **Save Edits**.
+- The Quick Access row has New, Open, Save, **Save All**, Undo, Redo, **Toggle Editing** and **Save Edits**.
+- **Save All** (**Ctrl+Alt+S**) saves the edits of every layer you're editing (they stay in edit mode) and then the project, in one click. It's also on *Edit › Manage Edits* and in the *Project* menu.
 
 ![Collapsed ribbon](docs/images/collapsed-ribbon.png)
 
@@ -157,7 +158,7 @@ Changed or added:
 | Contextual tabs | None | Feature Layer, Raster Layer and Standalone Table tabs follow the layer selected in Contents |
 | Layouts | New Layout and Layout Manager buttons | New Layout gallery with finished map sheets in ANSI and ISO sizes, My Templates, Import Template, Open Layout list, Export Layout (one or all to PDF) |
 | Workspace | — | Collapsible ribbon (double-click, Ctrl+F1, peek on click), Maximize Map, Map Only, Full Screen |
-| Quick Access row | New, Open, Save, Undo, Redo | Adds Toggle Editing and Save Edits, and the collapse button |
+| Quick Access row | New, Open, Save, Undo, Redo | Adds Save All (Ctrl+Alt+S: every layer's edits and the project), Toggle Editing and Save Edits, and the collapse button |
 | Edit tab | Tools and Modify groups | Tools (with Align Edge and Advanced Digitizing), a COGO group, Attributes in Features, as in Pro |
 | Selection / Labeling | Basic | Pro captions (Select By Attributes / Location, Switch), label Show/Hide, Rotate and Properties |
 | Share tab | Image, PDF, DXF, Layout | Adds Export Layout and Package Layers |

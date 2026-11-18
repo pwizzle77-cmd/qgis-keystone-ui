@@ -232,6 +232,7 @@ RIBBON = [
             ("mActionToggleEditing", "L", "edit", tr("Edit")),
             ("mActionSaveLayerEdits menu:AllEditsMenu", "L", "save_edits",
              tr("Save")),
+            ("fn:save_all", "L", "save_all", tr("Save\nAll")),
             ("mActionRollbackEdits mActionRollbackAllEdits", "L",
              "discard_edits", tr("Discard")),
             ("mActionUndo", "S", "undo", tr("Undo")),
@@ -467,6 +468,7 @@ PROJECT_MENU = [
     ("mActionOpenProject", "open_project"),
     ("menu:mRecentProjectsMenu", None),
     ("mActionSaveProject", "save_project"),
+    ("fn:save_all", None),
     ("mActionSaveProjectAs", "save_as"),
     ("mActionRevertProject", None),
     ("mActionCloseProject", None),
@@ -477,7 +479,7 @@ PROJECT_MENU = [
 ]
 # Quick Access Toolbar, as in Pro's title row, with the editing essentials.
 QUICK_ACCESS = ["mActionNewProject", "mActionOpenProject",
-                "mActionSaveProject", "mActionUndo", "mActionRedo",
+                "mActionSaveProject", "fn:save_all", "mActionUndo", "mActionRedo",
                 "|", "mActionToggleEditing", "mActionSaveLayerEdits"]
 
 
@@ -681,7 +683,7 @@ class TitleRow(QWidget):
     project name on the left, QGIS's locator centred (Command Search),
     messages and the ribbon collapse switch on the right."""
 
-    def __init__(self, iface, changes, collapse_action):
+    def __init__(self, iface, changes, collapse_action, resolve=None):
         super().__init__(objectName="ArcSkinTitleRow")
         win = iface.mainWindow()
         row = QHBoxLayout(self)
@@ -693,7 +695,7 @@ class TitleRow(QWidget):
                 line.setFrameShape(QFrame.Shape.VLine)
                 row.addWidget(line)
                 continue
-            action = find_action(win, name)
+            action = resolve(name) if resolve else find_action(win, name)
             if action:
                 button = QToolButton(autoRaise=True)
                 button.setDefaultAction(action)
@@ -786,6 +788,9 @@ class Ribbon(QObject):
             "maximize_map": self._command(
                 tr("Maximize Map (hide panes)"), self.set_map_maximized,
                 "full_extent", checkable=True),
+            "save_all": self._command(
+                tr("Save All: save the edits of every layer and the project "
+                   "(Ctrl+Alt+S)"), self.save_all, "save_all"),
             "collapse_ribbon": self._command(
                 tr("Collapse the Ribbon (Ctrl+F1)"), self.set_collapsed,
                 "collapse_all", checkable=True),
@@ -834,13 +839,48 @@ class Ribbon(QObject):
             "toggle_labels": self._command(
                 tr("Label the layer"), self._toggle_labels, "labeling"),
         }
-        collapse = cmds["collapse_ribbon"]
-        collapse.setShortcut(QKeySequence("Ctrl+F1"))
-        collapse.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
-        self.win.addAction(collapse)
-        self.changes.add(lambda: sip.isdeleted(collapse)
-                         or self.win.removeAction(collapse))
+        for key, keys in (("collapse_ribbon", "Ctrl+F1"),
+                          ("save_all", "Ctrl+Alt+S")):
+            action = cmds[key]
+            action.setShortcut(QKeySequence(keys))
+            action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
+            self.win.addAction(action)
+            self.changes.add(lambda a=action: sip.isdeleted(a)
+                             or self.win.removeAction(a))
         return cmds
+
+    def save_all(self):
+        """Pro's Save All: save the edits of every layer being edited (they
+        stay in edit mode), then save the project."""
+        saved, failed = [], []
+        for layer in QgsProject.instance().mapLayers().values():
+            if not isinstance(layer, QgsVectorLayer):
+                continue
+            if not (layer.isEditable() and layer.isModified()):
+                continue
+            if layer.commitChanges(False):
+                saved.append(layer.name())
+            else:
+                failed.append((layer.name(), layer.commitErrors()))
+                layer.triggerRepaint()
+        for layer in QgsProject.instance().mapLayers().values():
+            if isinstance(layer, QgsVectorLayer) and saved:
+                layer.triggerRepaint()
+        bar = self.iface.messageBar()
+        if failed:
+            name, errors = failed[0]
+            detail = "; ".join(errors[:3]) if errors else ""
+            bar.pushWarning(
+                tr("Save All"),
+                tr("Could not save the edits of {}: {}").format(
+                    ", ".join(n for n, _ in failed), detail))
+        # QGIS's own Save Project: asks for a file name for a new project.
+        self._trigger("mActionSaveProject")
+        project = QgsProject.instance()
+        if not failed and not project.isDirty():
+            what = (tr("Saved the edits of {} layer(s) and the project.").format(
+                len(saved)) if saved else tr("Saved the project."))
+            bar.pushSuccess(tr("Save All"), what)
 
     def _trigger(self, name):
         action = find_action(self.win, name)
@@ -1112,7 +1152,7 @@ class Ribbon(QObject):
                 if submenu:
                     menu.addMenu(submenu)
                 continue
-            action = find_action(win, name)
+            action = self.resolve(name)
             if action:
                 if icon:
                     restyle(self.changes, action, icon)
@@ -1206,7 +1246,7 @@ class Ribbon(QObject):
         stack.setContentsMargins(0, 0, 0, 0)
         stack.setSpacing(0)
         title = TitleRow(self.iface, self.changes,
-                         self.commands["collapse_ribbon"])
+                         self.commands["collapse_ribbon"], self.resolve)
         stack.addWidget(title)
         stack.addWidget(tabs)
         ribbon.addWidget(frame)
