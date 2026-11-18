@@ -11,10 +11,11 @@ reverted through :class:`~.util.Changes`.
 
 from qgis.core import QgsLayerTreeModel, QgsLayerTreeNode
 from qgis.PyQt import sip
-from qgis.PyQt.QtCore import QModelIndex, QObject, Qt, QTimer
+from qgis.PyQt.QtCore import QEvent, QModelIndex, QObject, Qt, QTimer
 from qgis.PyQt.QtGui import QAction, QFont, QIcon
 from qgis.PyQt.QtWidgets import (
-    QApplication, QDockWidget, QHBoxLayout, QLineEdit, QListWidget, QMenu,
+    QApplication, QDockWidget, QHBoxLayout, QLabel, QLineEdit, QListWidget,
+    QMainWindow, QMenu,
     QStyledItemDelegate, QTabBar, QToolBar, QToolButton, QTreeView, QWidget,
 )
 from qgis.gui import QgsBrowserTreeView
@@ -32,7 +33,10 @@ PANES = {
     "Browser": (tr("Catalog"), RIGHT, None),
     "ProcessingToolbox": (tr("Geoprocessing"), RIGHT, "Browser"),
     "LayerStyling": (tr("Symbology"), RIGHT, "Browser"),
+    "WorkspaceAttributes": (tr("Attributes"), RIGHT, "Browser"),
 }
+# The pane that last had the focus (an ActivePane), for Dock Left/Right.
+ACTIVE = {}
 # Icons for the Layers toolbar, in QGIS's button order.
 CONTENTS_ICONS = ["symbology", "add_group", "visibility", "filter",
                   "filter_expression", "expand_all", "collapse_all",
@@ -74,6 +78,8 @@ class ActivePane(QObject):
             dock.update()
 
     def mark(self, dock):
+        if dock is not None:
+            ACTIVE["dock"] = dock
         if dock is not self.current:
             self._set(self.current, False)
             self._set(dock, True)
@@ -265,6 +271,7 @@ def reset_panes(win, mode="mapping", close_others=True):
     placement.update({name: (RIGHT, "Browser") for name in extra})
     for name, (area, tab_with) in placement.items():
         if name in docks:
+            docks[name].setFloating(False)
             win.addDockWidget(area, docks[name])
             if tab_with in docks:
                 win.tabifyDockWidget(docks[tab_with], docks[name])
@@ -277,11 +284,191 @@ def reset_panes(win, mode="mapping", close_others=True):
         docks[front].raise_()
 
 
+def _home_area(win, dock):
+    """Side a pane belongs on: its Pro place, else the side it was on."""
+    name = dock.objectName()
+    if name in PANES:
+        return PANES[name][1]
+    area = win.dockWidgetArea(dock)
+    return area if area in (LEFT, RIGHT) else RIGHT
+
+
+def dock_pane(win, dock, area=None):
+    """Dock ``dock`` on ``area`` (default: its home side), as a tab of the
+    panes already there, like Pro's Dock option."""
+    if dock is None or sip.isdeleted(dock):
+        return
+    area = area or _home_area(win, dock)
+    dock.setFloating(False)
+    win.addDockWidget(area, dock)
+    others = [d for d in win.findChildren(QDockWidget)
+              if d is not dock and d.isVisible()
+              and not is_floating(win, d)
+              and win.dockWidgetArea(d) == area]
+    if others:
+        win.tabifyDockWidget(others[0], dock)
+    dock.show()
+    dock.raise_()
+
+
+def is_floating(win, dock):
+    """Floating on its own, or in a floating tab group: QGIS lets panes be
+    dragged out as a group, which gets an ordinary window title bar that
+    cannot dock it back (the trap a pane pulled out by accident falls in)."""
+    return dock.isFloating() or dock.window() is not win
+
+
+def dock_floating_panes(win):
+    """Dock every floating pane back on its side, tabbed with the panes
+    already there."""
+    for dock in win.findChildren(QDockWidget):
+        if dock.isVisible() and is_floating(win, dock):
+            dock_pane(win, dock)
+
+
+def active_pane(win):
+    """The pane last used, else a floating one."""
+    dock = ACTIVE.get("dock")
+    if dock is not None and not sip.isdeleted(dock) and dock.isVisible():
+        return dock
+    return next((d for d in win.findChildren(QDockWidget)
+                 if d.isVisible() and is_floating(win, d)), None)
+
+
+class PaneTitle(QWidget):
+    """Pro-style title bar for a pane: its name, then ▾ (pane menu),
+    float/dock and close buttons.
+
+    Qt gives a floating pane on Windows an ordinary window title bar,
+    where a double-click maximises instead of docking and right-click shows
+    the window menu: the trap a pane pulled out by accident falls in. With
+    this title bar a floating pane keeps the same header as a docked one:
+    double-click docks it back (or floats it), right-click or ▾ opens Dock
+    Left, Dock Right, Float, Dock All Floating Panes and Close. Dragging the
+    title still moves the pane as before."""
+
+    def __init__(self, win, dock):
+        super().__init__(dock, objectName="WorkspacePaneTitle")
+        self.win = win
+        self.dock = dock
+        row = QHBoxLayout(self)
+        row.setContentsMargins(8, 4, 2, 2)
+        row.setSpacing(0)
+        self.label = QLabel(dock.windowTitle(),
+                            objectName="WorkspacePaneTitleText")
+        row.addWidget(self.label, 1)
+        self.menu_button = self._button("▾", tr("Pane options"),
+                                        self._menu_at_button)
+        self.float_button = self._button("", tr("Float / Dock"), self.toggle)
+        self.close_button = self._button("✕", tr("Close"), dock.close)
+        for button in (self.menu_button, self.float_button,
+                       self.close_button):
+            row.addWidget(button)
+        dock.windowTitleChanged.connect(self.label.setText)
+        dock.topLevelChanged.connect(self._sync)
+        self._sync()
+
+    def _button(self, text, tip, slot):
+        button = QToolButton(self, autoRaise=True, text=text, toolTip=tip)
+        button.setObjectName("WorkspacePaneTitleButton")
+        button.clicked.connect(slot)
+        return button
+
+    def _sync(self, *_):
+        floating = is_floating(self.win, self.dock)
+        self.float_button.setText("⇲" if floating else "❐")
+        self.float_button.setToolTip(tr("Dock") if floating else tr("Float"))
+        self.close_button.setVisible(bool(
+            self.dock.features() & QDockWidget.DockWidgetFeature
+            .DockWidgetClosable))
+
+    def toggle(self):
+        if is_floating(self.win, self.dock):
+            dock_pane(self.win, self.dock)
+        else:
+            self.dock.setFloating(True)
+
+    def mouseDoubleClickEvent(self, event):  # noqa: N802 (Qt API name)
+        self.toggle()
+        event.accept()
+
+    def contextMenuEvent(self, event):  # noqa: N802 (Qt API name)
+        pane_menu(self.win, self.dock, event.globalPos())
+        event.accept()
+
+    def _menu_at_button(self):
+        button = self.menu_button
+        pane_menu(self.win, self.dock,
+                  button.mapToGlobal(button.rect().bottomLeft()))
+
+    def sizeHint(self):  # noqa: N802 (Qt API name)
+        hint = super().sizeHint()
+        hint.setHeight(max(hint.height(), 28))
+        return hint
+
+
+def pane_menu(win, dock, pos):
+    """The pane menu: Dock Left, Dock Right, Float, Dock All, Close."""
+    menu = QMenu(win)
+    menu.addAction(pro_icon("contents"), tr("Dock Left"),
+                   lambda: dock_pane(win, dock, LEFT))
+    menu.addAction(pro_icon("catalog"), tr("Dock Right"),
+                   lambda: dock_pane(win, dock, RIGHT))
+    if not is_floating(win, dock):
+        menu.addAction(tr("Float"), lambda: dock.setFloating(True))
+    menu.addSeparator()
+    menu.addAction(tr("Dock All Floating Panes"),
+                   lambda: dock_floating_panes(win))
+    menu.addAction(tr("Close"), dock.close)
+    menu.exec(pos)
+
+
+class PaneTitles(QObject):
+    """Gives every pane of the main window a PaneTitle, also panes QGIS
+    or plugins create later; undone when the workspace is switched off."""
+
+    def __init__(self, win, changes):
+        super().__init__(win)
+        self.win = win
+        self.dressed = []
+        for dock in win.findChildren(QDockWidget):
+            self.dress(dock)
+        win.installEventFilter(self)
+        changes.add(self.stop)
+
+    def dress(self, dock):
+        if dock in self.dressed or dock.titleBarWidget() is not None:
+            return
+        dock.setTitleBarWidget(PaneTitle(self.win, dock))
+        self.dressed.append(dock)
+
+    def eventFilter(self, watched, event):  # noqa: N802 (Qt API name)
+        if (event.type() == QEvent.Type.ChildAdded
+                and isinstance(event.child(), QDockWidget)):
+            dock = event.child()
+            QTimer.singleShot(0, lambda: sip.isdeleted(dock)
+                              or self.dress(dock))
+        return False
+
+    def stop(self):
+        self.win.removeEventFilter(self)
+        for dock in self.dressed:
+            if not sip.isdeleted(dock):
+                title = dock.titleBarWidget()
+                dock.setTitleBarWidget(None)
+                if title is not None:
+                    title.deleteLater()
+        self.dressed = []
+
+
 def reset_panes_menu(win, parent):
     """Drop-down with the Reset Panes modes."""
     menu = QMenu(parent)
     for mode, (text, _, _, _) in RESET_MODES.items():
         menu.addAction(text, lambda m=mode: reset_panes(win, m))
+    menu.addSeparator()
+    menu.addAction(tr("Dock All Floating Panes"),
+                   lambda: dock_floating_panes(win))
     return menu
 
 
@@ -307,6 +494,17 @@ def arrange_panes(iface, changes, place=True):
         dock = win.findChild(QDockWidget, name)
         if dock:
             dress(dock)
+    # Panes dock left and right, nest, and tab, as in Pro. Panes float one
+    # at a time (no grouped dragging): a floating pane keeps Qt's own title
+    # bar, so a double-click or its right-click menu docks it back.
+    options = win.dockOptions()
+    win.setDockOptions((options
+                        | QMainWindow.DockOption.AllowNestedDocks
+                        | QMainWindow.DockOption.AllowTabbedDocks
+                        | QMainWindow.DockOption.AnimatedDocks)
+                       & ~QMainWindow.DockOption.GroupedDragging)
+    changes.add(lambda: win.setDockOptions(options))
     if place:
         reset_panes(win, close_others=False)
     ActivePane(win, changes)
+    PaneTitles(win, changes)

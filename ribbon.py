@@ -38,7 +38,10 @@ from .layouts import (
     export_layouts_menu, import_layout_template, new_layout_menu,
     open_layouts_menu,
 )
-from .panes import reset_panes, reset_panes_menu
+from .panes import (
+    LEFT, RIGHT, active_pane, dock_floating_panes, dock_pane, reset_panes,
+    reset_panes_menu,
+)
 from .util import pro_icon, tr
 
 LARGE, SMALL = 32, 16
@@ -105,6 +108,7 @@ RIBBON = [
             ("mActionZoomToSelected mActionPanToSelected", "S",
              "zoom_selected", tr("Zoom To")),
             ("mActionInvertSelection", "S", "invert_selection", tr("Switch")),
+            ("fn:attributes_pane", "L", "multi_edit", tr("Attributes")),
         ]),
         (tr("Inquiry"), [
             ("mActionIdentify", "L", "identify", tr("Explore\nIdentify")),
@@ -197,6 +201,11 @@ RIBBON = [
             ("dock:MessageLog", "S", "message_log", tr("Messages")),
             ("menu:mToolbarMenu", "S", "toolbars", tr("Toolbars")),
         ]),
+        (tr("Docking"), [
+            ("fn:dock_floating", "L", "panes", tr("Dock Floating\nPanes")),
+            ("fn:dock_left", "S", "contents", tr("Dock Left")),
+            ("fn:dock_right", "S", "catalog", tr("Dock Right")),
+        ]),
         (tr("Workspace"), [
             ("fn:maximize_map", "L", "full_extent", tr("Maximize\nMap")),
             ("fn:collapse_ribbon", "S", "collapse_all",
@@ -249,7 +258,8 @@ RIBBON = [
             ("mActionVertexTool mActionVertexToolActiveLayer "
              "dock:VertexEditor", "L", "vertex_tool", tr("Modify")),
             ("mActionDeleteSelected", "L", "delete", tr("Delete")),
-            ("mActionMultiEditAttributes", "L", "multi_edit",
+            ("fn:attributes_pane mActionMultiEditAttributes", "L",
+             "multi_edit",
              tr("Attributes")),
         ]),
         (tr("Tools"), [
@@ -807,6 +817,20 @@ class Ribbon(QObject):
             "layer_histogram": self._command(
                 tr("Histogram"), lambda: layer_page("mOptsPage_Histogram"),
                 "histogram"),
+            "attributes_pane": self._command(
+                tr("Attributes pane: edit the selected features"),
+                self._show_attributes, "multi_edit"),
+            "dock_floating": self._command(
+                tr("Dock all floating panes back on their side"),
+                lambda: dock_floating_panes(self.win), "panes"),
+            "dock_left": self._command(
+                tr("Dock the active pane on the left"),
+                lambda: dock_pane(self.win, active_pane(self.win), LEFT),
+                "contents"),
+            "dock_right": self._command(
+                tr("Dock the active pane on the right"),
+                lambda: dock_pane(self.win, active_pane(self.win), RIGHT),
+                "catalog"),
             "toggle_labels": self._command(
                 tr("Label the layer"), self._toggle_labels, "labeling"),
         }
@@ -834,6 +858,13 @@ class Ribbon(QObject):
                 self.iface.showLayerProperties(layer)
         except TypeError:  # older signature without the page
             self.iface.showLayerProperties(layer)
+
+    def _show_attributes(self):
+        pane = self.win.findChild(QDockWidget, "WorkspaceAttributes")
+        if pane is not None:
+            pane.show()
+            pane.raise_()
+            pane.refresh()
 
     def _show_symbology(self):
         dock = self.win.findChild(QDockWidget, "LayerStyling")

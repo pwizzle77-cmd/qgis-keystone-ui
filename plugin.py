@@ -22,6 +22,7 @@ from qgis.PyQt.QtCore import QByteArray
 from qgis.PyQt.QtGui import QAction, QIcon
 from qgis.PyQt.QtWidgets import QToolBar
 
+from .attributes_pane import attributes_pane
 from .dialogs import WindowDresser
 from .icon_theme import apply_icon_theme
 from .mapview import frame_map
@@ -149,6 +150,7 @@ class WorkspaceRibbonPlugin:
                     StyleSheetBlock(win, load_qss(THEME)).remove)),
                 (5, lambda: apply_icon_theme(self.iface, changes)),
                 (1, lambda: WindowDresser(self.iface, changes)),
+                (1, lambda: attributes_pane(self.iface, changes)),
                 (1, ribbon_step),
                 (1, lambda: arrange_panes(self.iface, changes, first)),
                 (1, lambda: frame_map(self.iface, changes)),

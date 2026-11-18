@@ -19,6 +19,8 @@ sheets in one click, and gives your own plugins proper tabs instead of an "every
 
 - [The ribbon](#the-ribbon)
 - [Contextual layer tabs](#contextual-layer-tabs)
+- [Attributes pane](#attributes-pane)
+- [Panes and docking](#panes-and-docking)
 - [Making maps](#making-maps)
 - [Room to work](#room-to-work)
 - [What's changed from ArcSkin](#whats-changed-from-arcskin)
@@ -82,6 +84,33 @@ coloured band:
 
 ![Feature Layer > Data](docs/images/contextual-data.png)
 
+## Attributes pane
+
+As in Pro, selecting features opens an **Attributes** pane (tabbed with the Catalog):
+
+- The top half lists the selected features of every layer, grouped by layer and named by the layer's
+  display expression. Click a feature to edit it; click the layer to change a field on **all** its
+  selected features at once (then *apply changes*).
+- The bottom half shows the feature's fields stacked vertically, using the layer's own attribute
+  form, so value maps, lookup drop-downs, date pickers and constraints work as in the layer's form.
+- **Auto Apply** (on by default): a click in the fields starts editing on that layer, and each change
+  is written as you type. *Save Edits* still commits to the data source. Turn Auto Apply off to get an
+  **Apply** button instead.
+- The pane opens by itself after a selection with a **Select** tool or **Select By Attributes / Form**;
+  while open it follows every selection. Open it any time from *Map › Selection › Attributes* or
+  *Edit › Features › Attributes*.
+- Buttons: Zoom to, Flash, Remove from selection, Open the attribute table (selected).
+
+## Panes and docking
+
+- Every pane gets a Pro-style title bar with **▾** (pane menu), **Float/Dock** and **Close**.
+- **Double-click** a pane's title to float it; double-click a floating pane's title to dock it back.
+- **Right-click** a title (or ▾): *Dock Left*, *Dock Right*, *Float*, *Dock All Floating Panes*, *Close*.
+- *View › Docking*: **Dock Floating Panes**, **Dock Left**, **Dock Right** (for the pane you last used).
+- *View › Reset Panes* also docks floating panes back.
+- Panes float one at a time. (QGIS normally lets a tab group be dragged out together; on Windows that
+  group gets an ordinary window title bar that can't dock it back, which is how a pane gets stuck.)
+
 ## Making maps
 
 **New Layout** (on the Insert and Layout tabs) opens a gallery of page sizes — Letter, Legal, Tabloid,
@@ -132,12 +161,14 @@ Changed or added:
 | Edit tab | Tools and Modify groups | Tools (with Align Edge and Advanced Digitizing), a COGO group, Attributes in Features, as in Pro |
 | Selection / Labeling | Basic | Pro captions (Select By Attributes / Location, Switch), label Show/Hide, Rotate and Properties |
 | Share tab | Image, PDF, DXF, Layout | Adds Export Layout and Package Layers |
+| Attributes pane | — | Pro-style Attributes pane for the selection: feature list, vertical fields in the layer's form, multi-edit, Auto Apply |
+| Pane title bars | Qt / Windows title bars | Pro-style title bar on every pane (▾ menu, Float/Dock, Close); double-click docks a floating pane; Dock Left / Right / All Floating; panes float one at a time |
 | Rebuild | Switch off and on | **Plugins › Workspace Ribbon › Rebuild Ribbon** picks up plugins enabled after start-up |
 | ArcSkin | — | Switching Workspace Ribbon on turns ArcSkin's look off (both at once would fight over the window) |
 | Settings | `arcskin/…` keys, `ArcSkin` icon theme | Its own `workspace_ribbon/…` keys and `WorkspaceRibbon` icon theme, so the two plugins don't overwrite each other |
 | Translations | English, Polish | English only (for now) |
 
-The changed code is in `ribbon.py` (rewritten), `layouts.py` (new), `plugin.py`, `__init__.py` and
+The changed code is in `ribbon.py` (rewritten), `layouts.py` and `attributes_pane.py` (new), `panes.py` (docking), `plugin.py`, `__init__.py` and
 `metadata.txt`; small renames of settings keys and markers in `icon_theme.py`, `stylesheet.py`,
 `panes.py`, `dialogs.py`, `mapview.py`, `basemaps.py` and the theme's `style.qss`.
 

@@ -138,6 +138,36 @@ QDockWidget > QWidget {
     background-color: @bg-window;
 }
 
+/* Pane title bars (panes.py PaneTitle): docked and floating alike */
+QWidget#WorkspacePaneTitle {
+    background-color: @bg-window;
+}
+
+QLabel#WorkspacePaneTitleText {
+    color: @text;
+    font-family: "Segoe UI Semilight";
+    font-size: 12pt;
+}
+
+QDockWidget[wrActive="true"] QLabel#WorkspacePaneTitleText {
+    color: @accent;
+}
+
+QToolButton#WorkspacePaneTitleButton {
+    color: @text;
+    border: none;
+    padding: 0 4px;
+    font-size: 10pt;
+}
+
+QToolButton#WorkspacePaneTitleButton:hover {
+    background-color: @hover;
+}
+
+QToolButton#WorkspacePaneTitleButton::menu-indicator {
+    image: none;
+}
+
 /* --- Tabs: blue underline on the selected tab ------------------------- */
 
 QTabWidget::pane {
@@ -685,6 +715,11 @@ QDockWidget[wrActive="true"]::title {
 QDockWidget[wrActive="true"] > QWidget {
     border: 1px solid @accent;
     border-top: none;
+}
+
+QDockWidget[wrActive="true"] > QWidget#WorkspacePaneTitle {
+    border: 1px solid @accent;
+    border-bottom: none;
 }
 
 /* --- Title row (Quick Access, project name, Command Search) ---------- */
