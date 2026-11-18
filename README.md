@@ -20,8 +20,12 @@ sheets in one click, and gives your own plugins proper tabs instead of an "every
 - [The ribbon](#the-ribbon)
 - [Contextual layer tabs](#contextual-layer-tabs)
 - [Attributes pane](#attributes-pane)
+- [Editing: Create and Modify Features](#editing-create-and-modify-features)
+- [Explore and Locate](#explore-and-locate)
+- [Attribute tables below the map](#attribute-tables-below-the-map)
 - [Panes and docking](#panes-and-docking)
 - [Making maps](#making-maps)
+- [Layout ribbon](#layout-ribbon)
 - [Esri-style edit sketch](#esri-style-edit-sketch)
 - [Room to work](#room-to-work)
 - [What's changed from ArcSkin](#whats-changed-from-arcskin)
@@ -81,6 +85,15 @@ coloured band:
 - **Raster Layer** (purple): Appearance, Data (Histogram, Export Raster)
 - **Standalone Table** (orange): Data
 
+As in Pro, these tabs change the layer right from the ribbon, without opening Layer Properties:
+
+- **Appearance**: a **Transparency** slider; the **Visibility Range** (*Out Beyond* / *In Beyond*
+  scales, with *Clear Limits*); and **Swipe**: drag across the map to peel the layer back and see
+  what's under it (Shift+drag swipes up and down; Esc or another tool ends it).
+- **Labeling**: the label **Field** (or an expression), **font, size, bold and colour**, and
+  **Placement** (choices for points, lines or polygons). Changing any of them turns the labels on.
+  Rule-based labels are left alone; edit those in Label Settings.
+
 ![Feature Layer > Appearance](docs/images/contextual-feature-layer.png)
 
 ![Feature Layer > Data](docs/images/contextual-data.png)
@@ -101,6 +114,53 @@ As in Pro, selecting features opens an **Attributes** pane (tabbed with the Cata
   while open it follows every selection. Open it any time from *Map › Selection › Attributes* or
   *Edit › Features › Attributes*.
 - Buttons: Zoom to, Flash, Remove from selection, Open the attribute table (selected).
+
+## Editing: Create and Modify Features
+
+*Edit › Features › Create* opens the **Create Features** pane, as in Pro:
+
+- One **feature template** per editable layer, and one per category for layers drawn with
+  categorized symbology (a template for each road class, say), with the layer's own symbol. Type in
+  the search box to filter.
+- Click a template and the layer goes into edit mode, becomes the active layer and the tools for its
+  geometry show below: Point; Line, Arc, Bézier, Freehand, Trace, Right Angle and the shapes
+  (rectangle, circle, ellipse, regular polygon) for lines and polygons.
+- **Template attributes**: give a template default values (e.g. Status = Active, Road Class = Local).
+  New features get them for every field they leave empty. They're saved in the project.
+- While a construction tool is active, a **sketch toolbar** floats at the bottom of the map: Line,
+  Arc, Bézier, Freehand, Trace, Snapping, Advanced Digitizing (constraints), Undo vertex, **Finish
+  (F2)** and Cancel.
+
+*Edit › Features › Modify* opens the **Modify Features** pane: every editing tool in one searchable
+list, grouped as in Pro (General, Alignment, Construct, Divide, Reshape, Attributes, COGO and
+parcels), including Align Edge, the NENA Split & Re-range tool, the Parcel Fabric tools and COGO
+Workbench when those plugins are installed. Pick a tool to start it; the box below says what it does
+and how to use it.
+
+## Explore and Locate
+
+- **Explore** (*Map › Navigate*) works like Pro's: drag to pan, wheel to zoom, and **click a
+  feature** for a **pop-up** of its fields (value maps and lookups shown as their labels). When
+  several features are under the cursor, the pop-up lists them all. Its buttons zoom to, flash,
+  select or open the feature in the Attributes pane. QGIS's plain Pan tool is in the drop-down.
+- **Locate** (*Map › Inquiry*) is one search box for the county:
+  - **coordinates**: latitude/longitude (decimal or DMS, latitude first, as Google Maps shows them),
+    MGRS / US National Grid, UTM;
+  - **addresses** (start with the house number: *123 main*): the NENA Addressing and RCL Tools
+    address-point layer, or any point layer with an address field;
+  - **streets** (*main st*): the NENA centerline layer, or any line layer with a full street name
+    field (FULLNAME…), each street once, zooming to all its segments;
+  - **parcels** (*12-4S-16-02942-000* or part of it): layers with a parcel-number field (ParcelNo,
+    ParcelID, PIN…).
+
+  Click a result to zoom to it; features flash and coordinates get a pin. When nothing matches, a
+  button searches OpenStreetMap.
+
+## Attribute tables below the map
+
+With *View › Docking › Tables Below Map* on (the default), attribute tables open docked **under the
+map as tabs**, newest in front, instead of as separate windows. A table's own Dock/Undock button still
+floats it out.
 
 ## Panes and docking
 
@@ -128,6 +188,24 @@ Your own `.qpt` layout templates appear under **My Templates**; any template can
 ![Tabloid landscape map sheet](docs/images/layout-map-sheet.png)
 
 ![Layout tab](docs/images/tab-layout.png)
+
+## Layout ribbon
+
+A layout opened in the layout designer gets its own ribbon, in place of the designer's menus and
+toolbars (the menus stay under the blue **Layout** button), with Pro's layout tabs:
+
+- **Layout**: Clipboard, Navigate (Explore, Select, zooms, Move Content, Edit Vertices), Page Setup,
+  Show (rulers, guides, grid, smart guides, bounding boxes), Undo/Redo
+- **Insert**: Map Frame; Map Surrounds (Legend, North Arrow, Scale Bar, Table, Chart, Profile);
+  Graphics and Text (Text and dynamic text, Picture, Rectangle/Ellipse/Triangle, Polygon, Line/Arrow,
+  Marker, HTML)
+- **Arrange**: Group, Order, Align, Distribute, Size, Lock
+- **Map Series** (QGIS's atlas): settings, preview, page navigation, export
+- **Share**: Export PDF / image / SVG, Print, save as a layout template, Layout Manager
+
+The designer's toolbars come back when it closes, so QGIS still has them with the workspace off.
+
+![Layout ribbon](docs/images/layout-ribbon.png)
 
 ## Esri-style edit sketch
 

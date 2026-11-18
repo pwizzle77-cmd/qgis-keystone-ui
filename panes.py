@@ -34,6 +34,9 @@ PANES = {
     "ProcessingToolbox": (tr("Geoprocessing"), RIGHT, "Browser"),
     "LayerStyling": (tr("Symbology"), RIGHT, "Browser"),
     "WorkspaceAttributes": (tr("Attributes"), RIGHT, "Browser"),
+    "WorkspaceCreateFeatures": (tr("Create Features"), RIGHT, "Browser"),
+    "WorkspaceModifyFeatures": (tr("Modify Features"), RIGHT, "Browser"),
+    "WorkspaceLocate": (tr("Locate"), RIGHT, "Browser"),
 }
 # The pane that last had the focus (an ActivePane), for Dock Left/Right.
 ACTIVE = {}

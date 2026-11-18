@@ -23,6 +23,12 @@ from qgis.PyQt.QtGui import QAction, QIcon
 from qgis.PyQt.QtWidgets import QToolBar
 
 from .attributes_pane import attributes_pane
+from .create_features import create_features_pane
+from .docked_tables import docked_tables
+from .layout_ribbon import layout_ribbons
+from .locate import locate_pane
+from .modify_features import modify_features_pane
+from .sketch_toolbar import sketch_toolbar
 from .dialogs import WindowDresser
 from .icon_theme import apply_icon_theme
 from .mapview import frame_map
@@ -145,6 +151,7 @@ class WorkspaceRibbonPlugin:
 
             def ribbon_step():
                 self.ribbon = build_ribbon(self.iface, changes, self.action)
+                self.ribbon.docker = docked_tables(self.iface, changes)
 
             steps = [
                 (8, lambda: changes.add(
@@ -152,7 +159,12 @@ class WorkspaceRibbonPlugin:
                 (5, lambda: apply_icon_theme(self.iface, changes)),
                 (1, lambda: WindowDresser(self.iface, changes)),
                 (1, lambda: attributes_pane(self.iface, changes)),
+                (1, lambda: create_features_pane(self.iface, changes)),
+                (1, lambda: modify_features_pane(self.iface, changes)),
+                (1, lambda: locate_pane(self.iface, changes)),
                 (1, ribbon_step),
+                (1, lambda: sketch_toolbar(self.iface, changes)),
+                (1, lambda: layout_ribbons(self.iface, changes)),
                 (1, lambda: arrange_panes(self.iface, changes, first)),
                 (1, lambda: frame_map(self.iface, changes)),
                 (3, lambda: ProSymbology(changes, self.iface.mapCanvas())),

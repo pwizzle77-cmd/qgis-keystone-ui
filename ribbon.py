@@ -34,6 +34,8 @@ from qgis.PyQt.QtWidgets import (
 )
 
 from .basemaps import gallery_menu
+from .explore import ExploreTool
+from .layer_controls import LayerControls
 from .layouts import (
     export_layouts_menu, import_layout_template, new_layout_menu,
     open_layouts_menu,
@@ -78,7 +80,7 @@ RIBBON = [
             ("mActionCopyFeatures", "S", "copy", tr("Copy")),
         ]),
         (tr("Navigate"), [
-            ("mActionPan", "L", "pan", tr("Explore")),
+            ("fn:explore mActionPan", "L", "explore", tr("Explore")),
             ("mActionZoomFullExtent", "S", "full_extent", tr("Full Extent")),
             ("mActionZoomIn", "S", "zoom_in", tr("Zoom In")),
             ("mActionZoomOut", "S", "zoom_out", tr("Zoom Out")),
@@ -111,7 +113,8 @@ RIBBON = [
             ("fn:attributes_pane", "L", "multi_edit", tr("Attributes")),
         ]),
         (tr("Inquiry"), [
-            ("mActionIdentify", "L", "identify", tr("Explore\nIdentify")),
+            ("fn:locate", "L", "locate", tr("Locate")),
+            ("mActionIdentify", "L", "identify", tr("Identify")),
             ("mActionMeasure mActionMeasureArea mActionMeasureAngle "
              "mActionMeasureBearing", "L", "measure", tr("Measure")),
             ("mActionStatisticalSummary", "S", "statistics",
@@ -203,6 +206,7 @@ RIBBON = [
         ]),
         (tr("Docking"), [
             ("fn:dock_floating", "L", "panes", tr("Dock Floating\nPanes")),
+            ("fn:dock_tables", "L", "dock_tables", tr("Tables\nBelow Map")),
             ("fn:dock_left", "S", "contents", tr("Dock Left")),
             ("fn:dock_right", "S", "catalog", tr("Dock Right")),
         ]),
@@ -252,12 +256,14 @@ RIBBON = [
              tr("Overlap")),
         ]),
         (tr("Features"), [
-            ("mActionAddFeature mActionDigitizeWithSegment "
-             "mActionDigitizeWithCurve mActionStreamDigitize "
-             "mActionDigitizeWithBezier mActionDigitizeWithNurbs "
-             "mActionDigitizeShape", "L", "create_feature", tr("Create")),
-            ("mActionVertexTool mActionVertexToolActiveLayer "
-             "dock:VertexEditor", "L", "vertex_tool", tr("Modify")),
+            ("fn:create_features mActionAddFeature "
+             "mActionDigitizeWithSegment mActionDigitizeWithCurve "
+             "mActionStreamDigitize mActionDigitizeWithBezier "
+             "mActionDigitizeWithNurbs mActionDigitizeShape", "L",
+             "create_feature", tr("Create")),
+            ("fn:modify_features mActionVertexTool "
+             "mActionVertexToolActiveLayer dock:VertexEditor", "L",
+             "modify_features", tr("Modify")),
             ("mActionDeleteSelected", "L", "delete", tr("Delete")),
             ("fn:attributes_pane mActionMultiEditAttributes", "L",
              "multi_edit",
@@ -396,7 +402,12 @@ FEATURE_LAYER = [
             ("fn:layer_properties", "S", "project_properties",
              tr("Properties")),
         ]),
+        (tr("Visibility Range"), [
+            ("widget:visibility_range", "L", None, None),
+        ]),
         (tr("Effects"), [
+            ("widget:transparency", "L", None, None),
+            ("widget:swipe", "L", None, None),
             ("fn:layer_diagrams", "S", "diagram", tr("Diagrams")),
             ("fn:layer_masks", "S", "mask", tr("Masking")),
         ]),
@@ -405,6 +416,15 @@ FEATURE_LAYER = [
         (tr("Layer"), [
             ("fn:toggle_labels", "L", "labeling", tr("Label")),
             ("mActionLabeling", "L", "label_move", tr("Label\nSettings")),
+        ]),
+        (tr("Label Class"), [
+            ("widget:label_text", "L", None, None),
+        ]),
+        (tr("Text Symbol"), [
+            ("widget:label_symbol", "L", None, None),
+        ]),
+        (tr("Label Placement"), [
+            ("widget:label_placement", "L", None, None),
         ]),
         (tr("Label Tools"), [
             ("mActionMoveLabel", "S", "label_move", tr("Move")),
@@ -446,6 +466,13 @@ RASTER_LAYER = [
             ("mActionZoomActualSize", "S", "zoom_in", tr("Native\nResolution")),
             ("fn:layer_properties", "S", "project_properties",
              tr("Properties")),
+        ]),
+        (tr("Visibility Range"), [
+            ("widget:visibility_range", "L", None, None),
+        ]),
+        (tr("Effects"), [
+            ("widget:transparency", "L", None, None),
+            ("widget:swipe", "L", None, None),
         ]),
     ]),
     (tr("Data"), [
@@ -763,6 +790,9 @@ class Ribbon(QObject):
         self.context_pages = {}   # kind -> [(page, title)]
         self.peeking = False      # collapsed ribbon opened for one use
         self.hidden_docks = []
+        self.explore_tool = None
+        self.docker = None        # docked_tables.TableDocker, set by plugin
+        self.controls = LayerControls(iface, changes)
         self.commands = self._commands()
 
     # ---------------------------------------------------------- commands
@@ -838,7 +868,32 @@ class Ribbon(QObject):
                 "catalog"),
             "toggle_labels": self._command(
                 tr("Label the layer"), self._toggle_labels, "labeling"),
+            "explore": self._command(
+                tr("Explore: pan and zoom, click a feature for its pop-up"),
+                self._explore, "explore"),
+            "locate": self._command(
+                tr("Locate: find an address, street, parcel or "
+                   "coordinates"), lambda: self._show_pane("WorkspaceLocate"),
+                "locate"),
+            "create_features": self._command(
+                tr("Create Features pane: feature templates and "
+                   "construction tools"),
+                lambda: self._show_pane("WorkspaceCreateFeatures"),
+                "create_feature"),
+            "modify_features": self._command(
+                tr("Modify Features pane: all the editing tools"),
+                lambda: self._show_pane("WorkspaceModifyFeatures"),
+                "modify_features"),
+            "dock_tables": self._command(
+                tr("Open attribute tables as tabs below the map"),
+                self._dock_tables, "dock_tables", checkable=True),
         }
+        cmds["explore"].setCheckable(True)
+        cmds["dock_tables"].blockSignals(True)
+        cmds["dock_tables"].setChecked(
+            QgsSettings().value("workspace_ribbon/dock_tables", True,
+                                type=bool))
+        cmds["dock_tables"].blockSignals(False)
         for key, keys in (("collapse_ribbon", "Ctrl+F1"),
                           ("save_all", "Ctrl+Alt+S")):
             action = cmds[key]
@@ -982,6 +1037,30 @@ class Ribbon(QObject):
             pane.raise_()
             pane.refresh()
 
+    def _show_pane(self, name):
+        pane = self.win.findChild(QDockWidget, name)
+        if pane is not None:
+            if self.hidden_docks:
+                self.set_map_maximized(False)
+            pane.show()
+            pane.raise_()
+            if hasattr(pane, "refresh"):
+                pane.refresh()
+
+    def _explore(self):
+        canvas = self.iface.mapCanvas()
+        if self.explore_tool is None:
+            self.explore_tool = ExploreTool(self.iface)
+            self.explore_tool.setAction(self.commands["explore"])
+            self.changes.add(self.explore_tool.stop)
+        canvas.setMapTool(self.explore_tool)
+
+    def _dock_tables(self, on):
+        if self.docker is not None:
+            self.docker.set_on(on)
+        else:
+            QgsSettings().setValue("workspace_ribbon/dock_tables", bool(on))
+
     def _show_symbology(self):
         dock = self.win.findChild(QDockWidget, "LayerStyling")
         if dock:
@@ -1071,6 +1150,11 @@ class Ribbon(QObject):
     def button(self, names, size, icon, caption):
         """Ribbon button for an item; None when nothing it names exists."""
         large = size == "L"
+        if names.startswith("widget:"):
+            widget = self.controls.widget(names[7:])
+            if isinstance(widget, QToolButton):
+                _style(widget, large)
+            return widget
         button = QToolButton(autoRaise=True)
         win = self.win
         if names in ("gallery:basemaps", "panes:reset", "layouts:new",
