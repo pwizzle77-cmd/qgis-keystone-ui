@@ -22,6 +22,7 @@ sheets in one click, and gives your own plugins proper tabs instead of an "every
 - [Attributes pane](#attributes-pane)
 - [Panes and docking](#panes-and-docking)
 - [Making maps](#making-maps)
+- [Esri-style edit sketch](#esri-style-edit-sketch)
 - [Room to work](#room-to-work)
 - [What's changed from ArcSkin](#whats-changed-from-arcskin)
 - [Install](#install)
@@ -128,6 +129,13 @@ Your own `.qpt` layout templates appear under **My Templates**; any template can
 
 ![Layout tab](docs/images/tab-layout.png)
 
+## Esri-style edit sketch
+
+While you digitize, the sketch (QGIS's rubber band) is drawn like ArcGIS's edit sketch: a solid green
+2 px line with a light green fill instead of QGIS's thin, faded red one, and existing vertices show as
+small circles instead of crosses. Only settings still at QGIS's default are changed, so colours you
+picked in *Settings › Options › Digitizing* stay; switching the workspace off restores QGIS's own.
+
 ## Room to work
 
 - **Collapse the ribbon**: double-click any tab, press **Ctrl+F1**, or use the button at the right of
@@ -164,6 +172,7 @@ Changed or added:
 | Share tab | Image, PDF, DXF, Layout | Adds Export Layout and Package Layers |
 | Attributes pane | — | Pro-style Attributes pane for the selection: feature list, vertical fields in the layer's form, multi-edit, Auto Apply |
 | Pane title bars | Qt / Windows title bars | Pro-style title bar on every pane (▾ menu, Float/Dock, Close); double-click docks a floating pane; Dock Left / Right / All Floating; panes float one at a time |
+| Edit sketch | QGIS default (thin red rubber band) | Esri-style green sketch line and fill, circle vertex markers (QGIS defaults only; restored when switched off) |
 | Rebuild | Switch off and on | **Plugins › Workspace Ribbon › Rebuild Ribbon** picks up plugins enabled after start-up |
 | ArcSkin | — | Switching Workspace Ribbon on turns ArcSkin's look off (both at once would fight over the window) |
 | Settings | `arcskin/…` keys, `ArcSkin` icon theme | Its own `workspace_ribbon/…` keys and `WorkspaceRibbon` icon theme, so the two plugins don't overwrite each other |

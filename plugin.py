@@ -28,6 +28,7 @@ from .icon_theme import apply_icon_theme
 from .mapview import frame_map
 from .panes import arrange_panes
 from .progress import Progress
+from .rubber_band import apply_esri_rubber_band
 from .ribbon import build_ribbon
 from .stylesheet import StyleSheetBlock
 from .symbology import ProSymbology
@@ -155,6 +156,7 @@ class WorkspaceRibbonPlugin:
                 (1, lambda: arrange_panes(self.iface, changes, first)),
                 (1, lambda: frame_map(self.iface, changes)),
                 (3, lambda: ProSymbology(changes, self.iface.mapCanvas())),
+                (1, lambda: apply_esri_rubber_band(changes)),
             ]
             total = sum(weight for weight, _ in steps)
             progress = Progress(win, tr("Setting up the workspace…"))
