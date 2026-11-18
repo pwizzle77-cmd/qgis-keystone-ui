@@ -849,6 +849,81 @@ class Ribbon(QObject):
                              or self.win.removeAction(a))
         return cmds
 
+    # -- Save All is enabled only when there is something to save ----------
+    def _watch_save_state(self):
+        """Keep Save All disabled until a layer has unsaved edits or the
+        project has unsaved changes, as in Pro."""
+        self._save_timer = QTimer(self, singleShot=True, interval=150)
+        self._save_timer.timeout.connect(self._update_save_all)
+        self._watched_layers = []
+        project = QgsProject.instance()
+        project.isDirtyChanged.connect(self._schedule_save_state)
+        project.layersAdded.connect(self._watch_layers)
+        project.cleared.connect(self._schedule_save_state)
+        project.readProject.connect(self._schedule_save_state)
+        self._watch_layers(project.mapLayers().values())
+        self._update_save_all()
+
+        def stop():
+            for signal in (project.isDirtyChanged, project.cleared,
+                           project.readProject):
+                try:
+                    signal.disconnect(self._schedule_save_state)
+                except (TypeError, RuntimeError):
+                    pass
+            try:
+                project.layersAdded.disconnect(self._watch_layers)
+            except (TypeError, RuntimeError):
+                pass
+            for layer in self._watched_layers:
+                self._unwatch_layer(layer)
+            self._watched_layers = []
+            action = self.commands.get("save_all")
+            if action is not None and not sip.isdeleted(action):
+                action.setEnabled(True)
+        self.changes.add(stop)
+
+    _LAYER_SIGNALS = ("editingStarted", "editingStopped", "layerModified",
+                      "afterCommitChanges", "afterRollBack")
+
+    def _watch_layers(self, layers):
+        for layer in layers:
+            if isinstance(layer, QgsVectorLayer) and layer not in self._watched_layers:
+                for name in self._LAYER_SIGNALS:
+                    getattr(layer, name).connect(self._schedule_save_state)
+                layer.destroyed.connect(self._schedule_save_state)
+                self._watched_layers.append(layer)
+        self._schedule_save_state()
+
+    def _unwatch_layer(self, layer):
+        if sip.isdeleted(layer):
+            return
+        for name in self._LAYER_SIGNALS:
+            try:
+                getattr(layer, name).disconnect(self._schedule_save_state)
+            except (TypeError, RuntimeError):
+                pass
+
+    def _schedule_save_state(self, *_):
+        timer = getattr(self, "_save_timer", None)
+        if timer is not None and not sip.isdeleted(timer):
+            timer.start()
+
+    def _has_unsaved(self):
+        project = QgsProject.instance()
+        if project.isDirty():
+            return True
+        self._watched_layers = [lyr for lyr in self._watched_layers
+                                if not sip.isdeleted(lyr)]
+        return any(lyr.isEditable() and lyr.isModified()
+                   for lyr in self._watched_layers)
+
+    def _update_save_all(self):
+        action = self.commands.get("save_all")
+        if action is None or sip.isdeleted(action):
+            return
+        action.setEnabled(self._has_unsaved())
+
     def save_all(self):
         """Pro's Save All: save the edits of every layer being edited (they
         stay in edit mode), then save the project."""
@@ -881,6 +956,7 @@ class Ribbon(QObject):
             what = (tr("Saved the edits of {} layer(s) and the project.").format(
                 len(saved)) if saved else tr("Saved the project."))
             bar.pushSuccess(tr("Save All"), what)
+        self._update_save_all()
 
     def _trigger(self, name):
         action = find_action(self.win, name)
@@ -1271,6 +1347,9 @@ class Ribbon(QObject):
             self.set_collapsed(True, remember=False)
         self.changes.add(lambda: self.set_map_maximized(False)
                          if self.hidden_docks else None)
+
+        # Save All is greyed out until there is something to save.
+        self._watch_save_state()
 
         # Contextual tabs follow the layer selected in Contents.
         self.iface.currentLayerChanged.connect(self.layer_changed)

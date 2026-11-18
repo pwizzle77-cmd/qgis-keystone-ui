@@ -135,7 +135,7 @@ Your own `.qpt` layout templates appear under **My Templates**; any template can
 - **View › Maximize Map** hides every docked pane; click again to bring them back.
 - **View › Reset Panes** for Mapping, Editing or Geoprocessing, as in Pro.
 - The Quick Access row has New, Open, Save, **Save All**, Undo, Redo, **Toggle Editing** and **Save Edits**.
-- **Save All** (**Ctrl+Alt+S**) saves the edits of every layer you're editing (they stay in edit mode) and then the project, in one click. It's also on *Edit › Manage Edits* and in the *Project* menu.
+- **Save All** (**Ctrl+Alt+S**) saves the edits of every layer you're editing (they stay in edit mode) and then the project, in one click. It's greyed out until there's something to save: unsaved layer edits or project changes. It's also on *Edit › Manage Edits* and in the *Project* menu.
 
 ![Collapsed ribbon](docs/images/collapsed-ribbon.png)
 
