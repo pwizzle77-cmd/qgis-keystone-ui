@@ -56,7 +56,7 @@ The Parcels and Addressing tabs appear when those plugins are installed.
 [COGO Workbench](https://github.com/pwizzle77-cmd/qgis_cogo_workbench) go on the Edit tab, where Pro
 users look for them.
 
-**Edit** — editing tools, snapping, Align Edge and COGO in one place:
+**Edit** — editing tools, snapping, a Selection group (Select, Clear), Align Edge and COGO in one place:
 
 ![Edit tab](docs/images/tab-edit.png)
 
@@ -129,7 +129,13 @@ As in Pro, selecting features opens an **Attributes** pane (tabbed with the Cata
   New features get them for every field they leave empty. They're saved in the project.
 - While a construction tool is active, a **sketch toolbar** floats at the bottom of the map: Line,
   Arc, Bézier, Freehand, Trace, Snapping, Advanced Digitizing (constraints), Undo vertex, **Finish
-  (F2)** and Cancel.
+  (F2)** and Cancel. With the Vertex tool (Pro's Edit Vertices) it shows Snapping, Advanced
+  Digitizing, Vertex Editor, Delete vertex, Undo, Finish (F2) and Cancel.
+- **Selection chip**: click with the Select tool and the top-most feature is selected, on any
+  selectable layer (not just the active one). Where several features overlap, a small chip with the
+  number of features appears next to the cursor; click it for a list grouped by layer, hover an entry
+  to highlight it on the map and click to select that feature instead. Shift/Ctrl clicks are left to
+  QGIS.
 
 *Edit › Features › Modify* opens the **Modify Features** pane: every editing tool in one searchable
 list, grouped as in Pro (General, Alignment, Construct, Divide, Reshape, Attributes, COGO and
@@ -245,7 +251,7 @@ Changed or added:
 | Layouts | New Layout and Layout Manager buttons | New Layout gallery with finished map sheets in ANSI and ISO sizes, My Templates, Import Template, Open Layout list, Export Layout (one or all to PDF) |
 | Workspace | — | Collapsible ribbon (double-click, Ctrl+F1, peek on click), Maximize Map, Map Only, Full Screen |
 | Quick Access row | New, Open, Save, Undo, Redo | Adds Save All (Ctrl+Alt+S: every layer's edits and the project), Toggle Editing and Save Edits, and the collapse button |
-| Edit tab | Tools and Modify groups | Tools (with Align Edge and Advanced Digitizing), a COGO group, Attributes in Features, as in Pro |
+| Edit tab | Tools and Modify groups | Tools (with Align Edge and Advanced Digitizing), a COGO group, a Selection group (Select, Clear), Attributes in Features, as in Pro |
 | Selection / Labeling | Basic | Pro captions (Select By Attributes / Location, Switch), label Show/Hide, Rotate and Properties |
 | Share tab | Image, PDF, DXF, Layout | Adds Export Layout and Package Layers |
 | Attributes pane | — | Pro-style Attributes pane for the selection: feature list, vertical fields in the layer's form, multi-edit, Auto Apply |

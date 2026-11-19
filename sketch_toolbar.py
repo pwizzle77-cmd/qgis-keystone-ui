@@ -7,6 +7,16 @@ bottom centre of the map:
     Line · Arc · Bézier · Freehand | Trace · Snapping · Advanced
     Digitizing | Undo vertex · Finish (F2) · Cancel (Esc)
 
+While the Vertex tool is active (Pro's Edit Vertices) it shows the vertex
+version instead:
+
+    Snapping · Advanced Digitizing · Vertex Editor | Delete vertex ·
+    Undo · Finish (F2) · Cancel (Esc)
+
+QGIS's own tools are C++ classes that PyQGIS hands back as a plain
+QgsMapTool, so isinstance() cannot recognise them: the tool's Qt class
+chain (metaObject) is checked instead.
+
 The construction buttons are QGIS's own digitizing actions, so their state
 stays in step with the Advanced Digitizing toolbar. Finish sends the map
 the right-click that ends a sketch; F2 does the same while the map has the
@@ -23,22 +33,62 @@ from qgis.PyQt.QtWidgets import (
 
 from .util import pro_icon, tr
 
-# (QGIS action name or command, Pro icon, label)
+CAPTURE, VERTEX = "capture", "vertex"
+C, V, CV = {CAPTURE}, {VERTEX}, {CAPTURE, VERTEX}
+
+# (QGIS action name or command, Pro icon, label, modes shown in)
 BUTTONS = [
-    ("mActionDigitizeWithSegment", "create_feature", tr("Line")),
-    ("mActionDigitizeWithCurve", "fillet", tr("Arc")),
-    ("mActionDigitizeWithBezier", "reshape", tr("Bézier")),
-    ("mActionStreamDigitize", "simplify", tr("Freehand")),
-    ("|", None, None),
-    ("EnableTracingAction", "tracing", tr("Trace")),
-    ("EnableSnappingAction", "snapping", tr("Snapping")),
+    ("mActionDigitizeWithSegment", "create_feature", tr("Line"), C),
+    ("mActionDigitizeWithCurve", "fillet", tr("Arc"), C),
+    ("mActionDigitizeWithBezier", "reshape", tr("Bézier"), C),
+    ("mActionStreamDigitize", "simplify", tr("Freehand"), C),
+    ("|", None, None, C),
+    ("EnableTracingAction", "tracing", tr("Trace"), C),
+    ("EnableSnappingAction", "snapping", tr("Snapping"), CV),
     ("dock:AdvancedDigitizingTools", "advanced_digitizing",
-     tr("Advanced Digitizing")),
-    ("|", None, None),
-    ("cmd:undo", "undo", tr("Undo vertex (Backspace)")),
-    ("cmd:finish", "save_edits", tr("Finish (F2)")),
-    ("cmd:cancel", "discard_edits", tr("Cancel (Esc)")),
+     tr("Advanced Digitizing"), CV),
+    ("dock:VertexEditor", "vertex_tool", tr("Vertex Editor"), V),
+    ("|", None, None, CV),
+    ("cmd:delete_vertex", "delete", tr("Delete selected vertices (Del)"), V),
+    ("cmd:undo", "undo", tr("Undo vertex (Backspace)"), C),
+    ("cmd:undo_edit", "undo", tr("Undo (Ctrl+Z)"), V),
+    ("cmd:finish", "save_edits", tr("Finish (F2)"), CV),
+    ("cmd:cancel", "discard_edits", tr("Cancel (Esc)"), CV),
 ]
+
+# Qt class names of QGIS's vertex tools (app classes, not in PyQGIS).
+VERTEX_CLASSES = {"QgsVertexTool"}
+VERTEX_ACTIONS = {"mActionVertexTool", "mActionVertexToolActiveLayer"}
+
+
+def _class_chain(tool):
+    """Qt class names of ``tool`` and its base classes."""
+    names = []
+    try:
+        meta = tool.metaObject()
+    except (AttributeError, RuntimeError):
+        return names
+    while meta is not None:
+        names.append(meta.className())
+        meta = meta.superClass()
+    return names
+
+
+def tool_mode(tool):
+    """CAPTURE for a drawing tool, VERTEX for the Vertex tool, else None."""
+    if tool is None or sip.isdeleted(tool):
+        return None
+    if isinstance(tool, QgsMapToolCapture):
+        return CAPTURE
+    chain = _class_chain(tool)
+    if "QgsMapToolCapture" in chain:
+        return CAPTURE
+    if VERTEX_CLASSES.intersection(chain):
+        return VERTEX
+    action = tool.action()
+    if action is not None and action.objectName() in VERTEX_ACTIONS:
+        return VERTEX
+    return None
 
 
 class SketchToolbar(QFrame):
@@ -55,11 +105,14 @@ class SketchToolbar(QFrame):
         row = QHBoxLayout(self)
         row.setContentsMargins(4, 2, 4, 2)
         row.setSpacing(1)
-        for name, icon, label in BUTTONS:
+        self.mode = None
+        self.parts = []   # (widget, modes)
+        for name, icon, label, modes in BUTTONS:
             if name == "|":
                 line = QFrame(self)
                 line.setFrameShape(QFrame.Shape.VLine)
                 row.addWidget(line)
+                self.parts.append((line, modes))
                 continue
             button = QToolButton(self, autoRaise=True)
             if name.startswith("cmd:"):
@@ -80,6 +133,7 @@ class SketchToolbar(QFrame):
                 button.setToolTip(label)
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
             row.addWidget(button)
+            self.parts.append((button, modes))
         self.hide()
 
         # F2 finishes the sketch while the map has the focus (not app-wide:
@@ -98,10 +152,15 @@ class SketchToolbar(QFrame):
     # ------------------------------------------------------------- showing
     def _capturing_tool(self):
         tool = self.canvas.mapTool()
-        return tool if isinstance(tool, QgsMapToolCapture) else None
+        return tool if tool_mode(tool) == CAPTURE else None
 
     def _tool_set(self, new_tool, _old=None):
-        if isinstance(new_tool, QgsMapToolCapture):
+        mode = tool_mode(new_tool)
+        if mode is not None:
+            if mode != self.mode:
+                self.mode = mode
+                for widget, modes in self.parts:
+                    widget.setVisible(mode in modes)
             self.adjustSize()
             self._place()
             self.show()
@@ -130,19 +189,46 @@ class SketchToolbar(QFrame):
                 self.canvas, QKeyEvent(kind, key,
                                        Qt.KeyboardModifier.NoModifier))
 
+    def _mode(self):
+        return tool_mode(self.canvas.mapTool())
+
     def undo(self):
         """Remove the last vertex (Backspace)."""
         if self._capturing_tool() is not None:
             self._key(Qt.Key.Key_Backspace)
 
+    def undo_edit(self):
+        """Undo the last edit of the active layer (Ctrl+Z)."""
+        action = self.iface.mainWindow().findChild(QAction, "mActionUndo")
+        if action is not None and action.isEnabled():
+            action.trigger()
+
+    def delete_vertex(self):
+        """Delete the selected vertices (Del), Vertex tool only."""
+        if self._mode() == VERTEX:
+            self._key(Qt.Key.Key_Delete)
+
     def cancel(self):
-        """Drop the sketch (Esc)."""
-        if self._capturing_tool() is not None:
+        """Drop the sketch / the vertex selection (Esc)."""
+        if self._mode() is not None:
             self._key(Qt.Key.Key_Escape)
 
     def finish(self):
-        """End the sketch: QGIS finishes a feature on a right-click."""
-        if self._capturing_tool() is None:
+        """End the sketch: QGIS finishes a feature on a right-click.
+
+        With the Vertex tool (whose edits are already applied), Finish
+        clears the vertex selection and goes back to the Select tool, as
+        Pro's Finish ends Edit Vertices.
+        """
+        mode = self._mode()
+        if mode == VERTEX:
+            self._key(Qt.Key.Key_Escape)
+            select = self.iface.mainWindow().findChild(
+                QAction, "mActionSelectFeatures")
+            if select is not None:
+                select.trigger()
+            return
+        if mode != CAPTURE:
             return
         viewport = self.canvas.viewport()
         pos = viewport.mapFromGlobal(QCursor.pos())

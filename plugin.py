@@ -28,6 +28,7 @@ from .docked_tables import docked_tables
 from .layout_ribbon import layout_ribbons
 from .locate import locate_pane
 from .modify_features import modify_features_pane
+from .selection_chip import selection_chip
 from .sketch_toolbar import sketch_toolbar
 from .dialogs import WindowDresser
 from .icon_theme import apply_icon_theme
@@ -164,6 +165,7 @@ class WorkspaceRibbonPlugin:
                 (1, lambda: locate_pane(self.iface, changes)),
                 (1, ribbon_step),
                 (1, lambda: sketch_toolbar(self.iface, changes)),
+                (1, lambda: selection_chip(self.iface, changes)),
                 (1, lambda: layout_ribbons(self.iface, changes)),
                 (1, lambda: arrange_panes(self.iface, changes, first)),
                 (1, lambda: frame_map(self.iface, changes)),

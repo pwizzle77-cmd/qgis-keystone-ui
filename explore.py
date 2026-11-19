@@ -212,42 +212,7 @@ class ExploreTool(QgsMapToolPan):
             self.popup.close()
 
     def features_at(self, pos):
-        canvas = self.canvas()
-        point = canvas.getCoordinateTransform().toMapCoordinates(
-            pos.x(), pos.y())
-        radius = QgsMapTool.searchRadiusMU(canvas)
-        area = QgsRectangle(point.x() - radius, point.y() - radius,
-                            point.x() + radius, point.y() + radius)
-        here = QgsGeometry.fromPointXY(QgsPointXY(point))
-        dest = canvas.mapSettings().destinationCrs()
-        out = []
-        for layer in canvas.layers():
-            if not isinstance(layer, QgsVectorLayer) or not layer.isSpatial():
-                continue
-            if not layer.isInScaleRange(canvas.scale()):
-                continue
-            try:
-                to_layer = QgsCoordinateTransform(dest, layer.crs(),
-                                                  QgsProject.instance())
-                rect = to_layer.transformBoundingBox(area)
-                probe = QgsGeometry(here)
-                probe.transform(to_layer)
-                tol = max(rect.width(), rect.height()) / 2
-            except Exception:  # noqa: BLE001 - an odd CRS
-                continue
-            request = QgsFeatureRequest().setFilterRect(rect)
-            hits = []
-            for feature in layer.getFeatures(request):
-                geom = feature.geometry()
-                if geom is None or geom.isEmpty():
-                    continue
-                if geom.distance(probe) <= tol:
-                    hits.append((geom.distance(probe), feature))
-            hits.sort(key=lambda h: h[0])
-            out.extend((layer, f) for _d, f in hits)
-            if len(out) >= MAX_FEATURES:
-                break
-        return out[:MAX_FEATURES]
+        return features_at(self.canvas(), pos)
 
     def stop(self):
         if not sip.isdeleted(self.popup):
@@ -255,3 +220,43 @@ class ExploreTool(QgsMapToolPan):
             self.popup.deleteLater()
         if self.canvas().mapTool() is self:
             self.canvas().unsetMapTool(self)
+
+def features_at(canvas, pos, accept=None):
+    """(layer, feature) pairs under the canvas pixel ``pos`` on the visible
+    vector layers, top layer first and the nearest feature first within a
+    layer. ``accept(layer)`` may leave layers out."""
+    point = canvas.getCoordinateTransform().toMapCoordinates(
+        pos.x(), pos.y())
+    radius = QgsMapTool.searchRadiusMU(canvas)
+    area = QgsRectangle(point.x() - radius, point.y() - radius,
+                        point.x() + radius, point.y() + radius)
+    here = QgsGeometry.fromPointXY(QgsPointXY(point))
+    dest = canvas.mapSettings().destinationCrs()
+    out = []
+    for layer in canvas.layers():
+        if not isinstance(layer, QgsVectorLayer) or not layer.isSpatial():
+            continue
+        if not layer.isInScaleRange(canvas.scale()):
+            continue
+        try:
+            to_layer = QgsCoordinateTransform(dest, layer.crs(),
+                                              QgsProject.instance())
+            rect = to_layer.transformBoundingBox(area)
+            probe = QgsGeometry(here)
+            probe.transform(to_layer)
+            tol = max(rect.width(), rect.height()) / 2
+        except Exception:  # noqa: BLE001 - an odd CRS
+            continue
+        request = QgsFeatureRequest().setFilterRect(rect)
+        hits = []
+        for feature in layer.getFeatures(request):
+            geom = feature.geometry()
+            if geom is None or geom.isEmpty():
+                continue
+            if geom.distance(probe) <= tol:
+                hits.append((geom.distance(probe), feature))
+        hits.sort(key=lambda h: h[0])
+        out.extend((layer, f) for _d, f in hits)
+        if len(out) >= MAX_FEATURES:
+            break
+    return out[:MAX_FEATURES]
