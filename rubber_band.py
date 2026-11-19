@@ -18,7 +18,7 @@ import json
 from qgis.core import QgsSettings
 from qgis.PyQt.QtGui import QColor
 
-ORIGINAL_KEY = "workspace_ribbon/original_digitizing"
+ORIGINAL_KEY = "keystone/original_digitizing"
 
 # Registry entry name -> Esri-style value
 ESRI = {

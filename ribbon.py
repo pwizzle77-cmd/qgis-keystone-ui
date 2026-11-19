@@ -1,4 +1,4 @@
-"""Workspace Ribbon: an ArcGIS Pro style ribbon replacing QGIS's menu bar
+"""Keystone: a ribbon replacing QGIS's menu bar
 and toolbars.
 
 Built on ArcSkin's ribbon (EnviroSolutions, GPL-2.0-or-later) and extended
@@ -47,7 +47,7 @@ from .panes import (
 from .util import pro_icon, tr
 
 LARGE, SMALL = 32, 16
-COLLAPSED_KEY = "workspace_ribbon/collapsed"
+COLLAPSED_KEY = "keystone/collapsed"
 # Core toolbars where plugins put their buttons; shown on the Add-ins tab.
 ADDIN_HOSTS = {"mPluginToolBar", "mWebToolBar", "mDatabaseToolBar",
                "mVectorToolBar", "mRasterToolBar"}
@@ -898,7 +898,7 @@ class Ribbon(QObject):
         cmds["explore"].setCheckable(True)
         cmds["dock_tables"].blockSignals(True)
         cmds["dock_tables"].setChecked(
-            QgsSettings().value("workspace_ribbon/dock_tables", True,
+            QgsSettings().value("keystone/dock_tables", True,
                                 type=bool))
         cmds["dock_tables"].blockSignals(False)
         for key, keys in (("collapse_ribbon", "Ctrl+F1"),
@@ -1066,7 +1066,7 @@ class Ribbon(QObject):
         if self.docker is not None:
             self.docker.set_on(on)
         else:
-            QgsSettings().setValue("workspace_ribbon/dock_tables", bool(on))
+            QgsSettings().setValue("keystone/dock_tables", bool(on))
 
     def _show_symbology(self):
         dock = self.win.findChild(QDockWidget, "LayerStyling")
@@ -1092,7 +1092,7 @@ class Ribbon(QObject):
             processing.execAlgorithmDialog("native:package")
         except Exception:  # noqa: BLE001 (processing missing or failed)
             self.iface.messageBar().pushWarning(
-                tr("Workspace Ribbon"),
+                tr("Keystone"),
                 tr("The Package Layers tool is not available."))
 
     # ----------------------------------------------------- map workspace
@@ -1404,7 +1404,7 @@ class Ribbon(QObject):
         if addins:
             tabs.addTab(_tab(addins), tr("Add-ins"))
 
-        ribbon = QToolBar("Workspace Ribbon", win,
+        ribbon = QToolBar("Keystone", win,
                           objectName="ArcSkinRibbonBar")
         ribbon.setMovable(False)
         ribbon.setFloatable(False)
@@ -1455,7 +1455,7 @@ class Ribbon(QObject):
 
 
 def build_ribbon(iface, changes, toggle_action):
-    """Build the Workspace Ribbon; everything is undone through changes."""
+    """Build the Keystone ribbon; everything is undone through changes."""
     ribbon = Ribbon(iface, changes, toggle_action)
     ribbon.build()
     changes.add(lambda: sip.isdeleted(ribbon) or ribbon.deleteLater())

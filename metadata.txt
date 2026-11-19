@@ -1,13 +1,17 @@
 [general]
-name=Workspace Ribbon
+name=Keystone
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
-description=A professional, ArcGIS Pro style workspace for QGIS: a categorized ribbon with contextual layer tabs, a print-layout gallery for map making, a collapsible ribbon and Maximize Map, and tabs for Parcel Fabric, NENA Addressing and RCL Tools, Align Edge and COGO Workbench.
-about=Workspace Ribbon replaces QGIS's menu bar and toolbars with a ribbon organized the way ArcGIS Pro users expect: Map, Insert, Layout, Analysis, View, Edit, Imagery, Share and Help, plus Parcels and Addressing tabs for the Parcel Fabric and NENA Addressing and RCL Tools plugins, Align Edge and COGO Workbench on the Edit tab, and an Add-ins tab only for plugins it doesn't know. Selecting a layer in Contents adds Pro's contextual tabs (Feature Layer: Appearance, Labeling, Data; Raster Layer; Standalone Table). For map creation, New Layout opens a gallery of ANSI and ISO page sizes that builds a finished map sheet (map, title, legend, north arrow, scale bar, footer) or a blank page, lists your own .qpt templates, and Export Layout writes one or all layouts to PDF. For room to work, double-click a tab or press Ctrl+F1 to collapse the ribbon, and use View > Maximize Map to hide all panes. Switching it off restores QGIS exactly as it was. Built on ArcSkin by EnviroSolutions (GPL-2.0-or-later): its light theme, Pro-style icons, panes, map status bar, basemaps and symbology. Replaces ArcSkin; switch one of them on at a time. Not affiliated with or endorsed by Esri; ArcGIS and ArcGIS Pro are trademarks of Esri.
-version=0.3.3
+description=Every tool where you expect it: turns QGIS into an organized, ribbon-based workspace with labelled tabs, contextual layer tabs, one-click map sheets, a Locate search box, an Attributes pane and room to work. Switch it off and QGIS is exactly as it was.
+about=Keystone (formerly Workspace Ribbon) replaces QGIS's menu bar and toolbars with an organized ribbon: Map, Insert, Layout, Analysis, View, Edit, Imagery, Share and Help, plus Parcels and Addressing tabs for the Parcel Fabric and NENA Addressing and RCL Tools plugins, Align Edge and COGO Workbench on the Edit tab, and an Add-ins tab only for plugins it doesn't know. Selecting a layer in Contents adds contextual tabs (Feature Layer: Appearance, Labeling, Data; Raster Layer; Standalone Table). For map creation, New Layout opens a gallery of ANSI and ISO page sizes that builds a finished map sheet (map, title, legend, north arrow, scale bar, footer) or a blank page, lists your own .qpt templates, and Export Layout writes one or all layouts to PDF. For room to work, double-click a tab or press Ctrl+F1 to collapse the ribbon, and use View > Maximize Map to hide all panes. Switching it off restores QGIS exactly as it was. Built on ArcSkin by EnviroSolutions (GPL-2.0-or-later): its light theme, Pro-style icons, panes, map status bar, basemaps and symbology. Replaces ArcSkin; switch one of them on at a time. Feels familiar if you come from ArcGIS Pro. Not affiliated with or endorsed by Esri; ArcGIS and ArcGIS Pro are trademarks of Esri.
+version=0.4.0
 author=Charles
 email=pwizzle77@gmail.com
+homepage=https://github.com/pwizzle77-cmd/qgis-keystone
+repository=https://github.com/pwizzle77-cmd/qgis-keystone
+tracker=https://github.com/pwizzle77-cmd/qgis-keystone/issues
 changelog=
+    0.4.0 - Renamed from Workspace Ribbon to Keystone (plugin folder keystone). Settings, the window layout to restore, basemaps and feature-template presets carry over; remove the old workspace_ribbon plugin.
     0.3.3 - Locate: Search in All layers (now also every other layer, in all its fields) or one layer, and in one field or all of its fields.
     0.3.2 - Edit tab has a Selection group (Select and Clear), as in Pro, so you can pick or clear features, or leave Align Edge, without going back to the Map tab.
     0.3.1 - The floating sketch toolbar now shows at the bottom of the map with QGIS's own digitizing tools (it never appeared: QGIS's C++ capture tools weren't recognised), and in a vertex version while the Vertex tool is active (Snapping, Advanced Digitizing, Vertex Editor, Delete vertex, Undo, Finish F2, Cancel). Selection chip, as in Pro: a click with the Select tool picks the top-most feature on any selectable layer, and where several features overlap a small chip next to the cursor lists them by layer (hover to highlight, click to select that one).
@@ -17,7 +21,7 @@ changelog=
     0.2.1 - Save All button (Ctrl+Alt+S) next to Save on the Quick Access row, on Edit > Manage Edits and in the Project menu: saves the edits of every layer being edited (they stay in edit mode), then the project.
     0.2.0 - Attributes pane (as in Pro): selecting features with a Select tool or Select By Attributes opens a pane listing the selected features by layer, with the picked feature's fields stacked vertically in the layer's own form; click a layer to edit all its selected features at once. Auto Apply writes changes as you type and a click in the fields starts editing. Attributes buttons on Map > Selection and Edit > Features. Docking: right-click a pane's title for Dock Left, Dock Right, Float, Dock All Floating Panes; View > Docking group; Reset Panes re-docks floating panes; nested and tabbed docking switched on.
     0.1.0 - First version: categorized ribbon with Parcels and Addressing tabs, Align Edge and COGO on the Edit tab, contextual layer tabs, Layout tab with a New Layout gallery and PDF export, collapsible ribbon (Ctrl+F1), Maximize Map, editing tools on the Quick Access Toolbar. Based on ArcSkin 0.6.1.
-tags=theme,ui,interface,ribbon,icons,arcgis pro,layout,cartography,editing,workspace
+tags=theme,ui,interface,ribbon,icons,layout,cartography,editing,workspace,keystone
 category=Plugins
 icon=resources/icons/icon.svg
 experimental=True

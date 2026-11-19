@@ -27,7 +27,7 @@ from qgis.PyQt.QtWidgets import (
 from . import coords
 from .util import pro_icon, separator, tool_button, tr
 
-UNIT_KEY = "workspace_ribbon/coordinate_format"
+UNIT_KEY = "keystone/coordinate_format"
 # The project's own layer check states while Contents shows another map
 # view: a theme in a collection of the plugin's own (never saved).
 MAIN_STATE = "main"
@@ -512,7 +512,7 @@ class MapFooter(QWidget):
                                        self._map_crs())
         except Exception:
             self.iface.messageBar().pushWarning(
-                "Workspace Ribbon", tr("Coordinates not recognized: {}").format(
+                "Keystone", tr("Coordinates not recognized: {}").format(
                     self.coords.text()))
             return
         self.canvas.setCenter(point)

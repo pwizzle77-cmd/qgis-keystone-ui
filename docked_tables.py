@@ -15,7 +15,7 @@ from qgis.PyQt.QtCore import QEvent, QObject, Qt, QTimer
 from qgis.PyQt.QtGui import QAction
 from qgis.PyQt.QtWidgets import QDockWidget, QWidget
 
-ON_KEY = "workspace_ribbon/dock_tables"
+ON_KEY = "keystone/dock_tables"
 LEGACY_KEY = "qgis/dockAttributeTable"
 DIALOG_CLASS = "QgsAttributeTableDialog"
 

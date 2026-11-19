@@ -25,8 +25,8 @@ import re
 from qgis.PyQt.QtCore import QEvent, QObject, QTimer
 from qgis.PyQt.QtWidgets import QApplication
 
-MARK_BEGIN = "/* workspace_ribbon: begin */"
-MARK_END = "/* workspace_ribbon: end */"
+MARK_BEGIN = "/* keystone: begin */"
+MARK_END = "/* keystone: end */"
 BLOCK_RE = re.compile(re.escape(MARK_BEGIN) + ".*?" + re.escape(MARK_END)
                       + r"\n?", re.DOTALL)
 

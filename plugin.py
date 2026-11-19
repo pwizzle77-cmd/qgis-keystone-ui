@@ -1,4 +1,4 @@
-"""Workspace Ribbon plugin: an ArcGIS Pro style workspace for QGIS, fully
+"""Keystone plugin: an organized, ribbon-based workspace for QGIS, fully
 reverted when switched off.
 
 Based on ArcSkin by EnviroSolutions (GPL-2.0-or-later): its theme, Pro-style
@@ -42,17 +42,41 @@ from .symbology import ProSymbology
 from .util import Changes, tr
 
 PLUGIN_DIR = Path(__file__).resolve().parent
-MENU_NAME = "&Workspace Ribbon"
+MENU_NAME = "&Keystone"
 THEME = "pro_light"
 VARIABLE_RE = re.compile(r"^\s*@([\w-]+)\s*:\s*(.+?)\s*;\s*$", re.MULTILINE)
 # Window layout before the ribbon, kept in settings so that switching it
 # off after a QGIS restart still brings the original toolbars back.
-STATE_KEY = "workspace_ribbon/original_window_state"
+STATE_KEY = "keystone/original_window_state"
 # The user's own on/off choice. Written only on a click.
-ENABLED_KEY = "workspace_ribbon/enabled"
+ENABLED_KEY = "keystone/enabled"
 # ArcSkin does the same job; both at once would fight over the window.
 ARCSKIN = "arcskin"
 ARCSKIN_ENABLED_KEY = "arcskin/enabled"
+
+
+# Keystone was called Workspace Ribbon up to 0.3.3. Its settings carry over.
+OLD_PREFIX = "workspace_ribbon"
+NEW_PREFIX = "keystone"
+
+
+def migrate_old_settings() -> int:
+    """Copy the Workspace Ribbon settings to Keystone once (the window layout
+    to restore, the on/off choice, collapsed ribbon …). Returns how many."""
+    settings = QgsSettings()
+    if settings.value(NEW_PREFIX + "/migrated", False, type=bool):
+        return 0
+    settings.beginGroup(OLD_PREFIX)
+    keys = settings.allKeys()
+    settings.endGroup()
+    copied = 0
+    for key in keys:
+        new = f"{NEW_PREFIX}/{key}"
+        if not settings.contains(new):
+            settings.setValue(new, settings.value(f"{OLD_PREFIX}/{key}"))
+            copied += 1
+    settings.setValue(NEW_PREFIX + "/migrated", True)
+    return copied
 
 
 def load_qss(theme: str) -> str:
@@ -73,7 +97,7 @@ def load_qss(theme: str) -> str:
     )
 
 
-class WorkspaceRibbonPlugin:
+class KeystonePlugin:
     """QGIS plugin entry point: a checkable action toggles the workspace."""
 
     def __init__(self, iface):
@@ -82,9 +106,10 @@ class WorkspaceRibbonPlugin:
         self.ribbon = None
 
     def initGui(self):  # noqa: N802 (QGIS API name)
+        migrate_old_settings()
         icon = QIcon(str(PLUGIN_DIR / "resources" / "icons" / "icon.svg"))
         self.action = QAction(
-            icon, tr("Workspace Ribbon"), self.iface.mainWindow(),
+            icon, tr("Keystone"), self.iface.mainWindow(),
             checkable=True)
         self.action.setToolTip(tr("Switch the Pro-style workspace on or off"))
         self.action.toggled.connect(self.set_enabled)
@@ -130,8 +155,8 @@ class WorkspaceRibbonPlugin:
             action.setChecked(False)
             QgsSettings().setValue(ARCSKIN_ENABLED_KEY, False)
             self.iface.messageBar().pushMessage(
-                tr("Workspace Ribbon"),
-                tr("ArcSkin's look was switched off; Workspace Ribbon "
+                tr("Keystone"),
+                tr("ArcSkin's look was switched off; Keystone "
                    "replaces it. You can disable the ArcSkin plugin."),
                 Qgis.MessageLevel.Info, 8)
         elif plugin is not None:

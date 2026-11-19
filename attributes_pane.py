@@ -34,7 +34,7 @@ from qgis.PyQt.QtWidgets import (
 from .util import pro_icon, tr
 
 OBJECT_NAME = "WorkspaceAttributes"
-AUTO_KEY = "workspace_ribbon/attributes_auto_apply"
+AUTO_KEY = "keystone/attributes_auto_apply"
 MAX_LISTED = 1000          # features listed per layer
 SAVE_DELAY = 700           # ms after the last keystroke before applying
 SELECT_TOOLS = {

@@ -1,11 +1,11 @@
-"""Take the README screenshots of Workspace Ribbon.
+"""Take the README screenshots of Keystone.
 
 Run in the QGIS Python console (Plugins > Python Console):
 
     exec(open(r"<path to this file>").read())
 
 It needs an empty or saved project (it starts a new one with a small demo
-dataset over OpenStreetMap), switches Workspace Ribbon on if needed, steps
+dataset over OpenStreetMap), switches Keystone on if needed, steps
 through the tabs and saves PNGs to docs/images next to this script's
 plugin folder. QGIS must be in front and not covered while it runs (about
 40 seconds); it prints DONE at the end.
@@ -21,9 +21,9 @@ from qgis.PyQt.QtCore import QPoint, QTimer
 from qgis.PyQt.QtGui import QColor, QPainter
 from qgis.PyQt.QtWidgets import QApplication, QTabWidget, QToolButton
 
-PLUGIN = "workspace_ribbon"
+PLUGIN = "keystone"
 HERE = os.path.dirname(os.path.abspath(
-    globals().get("__file__", r"E:\OneDrive - Columbia County Board of County Commissioners\Repo\QGIS Plugins\workspace_ribbon\scripts\capture_screenshots.py")))
+    globals().get("__file__", r"E:\OneDrive - Columbia County Board of County Commissioners\Repo\QGIS Plugins\keystone\scripts\capture_screenshots.py")))
 OUT = os.path.join(os.path.dirname(HERE), "docs", "images")
 os.makedirs(OUT, exist_ok=True)
 _win = iface.mainWindow()
@@ -73,7 +73,7 @@ def _button(text):
 
 def _demo_data():
     _project.clear()
-    _project.setTitle("Workspace Ribbon Demo")
+    _project.setTitle("Keystone Demo")
     _project.setCrs(QgsCoordinateReferenceSystem("EPSG:3857"))
     osm = QgsRasterLayer(
         "type=xyz&url=https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -215,7 +215,7 @@ else:
 
     @step(7000)
     def _l1():
-        from workspace_ribbon.layouts import build_layout
+        from keystone.layouts import build_layout
         iface.setActiveLayer(_state["osm"])
         build_layout(iface, "Tabloid (ANSI B)", 11 * 25.4, 17 * 25.4, True,
                      True)

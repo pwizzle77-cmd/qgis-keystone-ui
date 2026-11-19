@@ -1,12 +1,19 @@
-# Workspace Ribbon for QGIS
+# Keystone for QGIS
 
-An ArcGIS Pro style workspace for QGIS 3.40+ and QGIS 4. It replaces the menu bar and toolbars with a
-ribbon organised the way Pro users expect, adds Pro's contextual layer tabs, builds print-ready map
-sheets in one click, and gives your own plugins proper tabs instead of an "everything else" pile.
+**Every tool where you expect it.** Keystone turns QGIS 3.40+ and QGIS 4 into an organized,
+ribbon-based workspace: the menu bar and dozens of toolbars become labelled tabs, the right tools show
+up when you pick a layer, a print-ready map sheet is one click away, one search box finds addresses,
+streets, parcels and coordinates, and your own plugins get proper tabs instead of an "everything else"
+pile. Switch it off and QGIS is exactly as it was.
+
+If you come from ArcGIS Pro, it will feel familiar.
+
+> **Keystone was called Workspace Ribbon** up to version 0.3.3. Remove `workspace_ribbon` in the
+> Plugin Manager after installing Keystone; your settings carry over.
 
 ![Map tab](docs/images/tab-map.png)
 
-> **A modified version of ArcSkin.** Workspace Ribbon is built on
+> **A modified version of ArcSkin.** Keystone is built on
 > [ArcSkin](https://github.com/envirosolutionspl/arcskin) by
 > [EnviroSolutions](https://github.com/envirosolutionspl)
 > ([QGIS plugin page](https://plugins.qgis.org/plugins/arcskin/)), version 0.6.1, under the
@@ -247,7 +254,7 @@ the look off to restore QGIS exactly.
 
 Changed or added:
 
-| Area | ArcSkin 0.6.1 | Workspace Ribbon |
+| Area | ArcSkin 0.6.1 | Keystone |
 | --- | --- | --- |
 | Ribbon tabs | Map, Insert, Analysis, View, Edit, Share, Help, Add-ins | Map, Insert, **Layout**, Analysis, View, Edit, **Imagery**, Share, **Parcels**, **Addressing**, Help, Add-ins |
 | Plugin toolbars | All on the Add-ins tab, one group per toolbar | Known plugins get their own tabs with named groups and short captions (Parcels, Addressing) or go on the Edit tab (Align Edge, COGO Workbench); Add-ins holds only the rest |
@@ -263,9 +270,9 @@ Changed or added:
 | Attributes pane | — | Pro-style Attributes pane for the selection: feature list, vertical fields in the layer's form, multi-edit, Auto Apply |
 | Pane title bars | Qt / Windows title bars | Pro-style title bar on every pane (▾ menu, Float/Dock, Close); double-click docks a floating pane; Dock Left / Right / All Floating; panes float one at a time |
 | Edit sketch | QGIS default (thin red rubber band) | Esri-style green sketch line and fill, circle vertex markers (QGIS defaults only; restored when switched off) |
-| Rebuild | Switch off and on | **Plugins › Workspace Ribbon › Rebuild Ribbon** picks up plugins enabled after start-up |
-| ArcSkin | — | Switching Workspace Ribbon on turns ArcSkin's look off (both at once would fight over the window) |
-| Settings | `arcskin/…` keys, `ArcSkin` icon theme | Its own `workspace_ribbon/…` keys and `WorkspaceRibbon` icon theme, so the two plugins don't overwrite each other |
+| Rebuild | Switch off and on | **Plugins › Keystone › Rebuild Ribbon** picks up plugins enabled after start-up |
+| ArcSkin | — | Switching Keystone on turns ArcSkin's look off (both at once would fight over the window) |
+| Settings | `arcskin/…` keys, `ArcSkin` icon theme | Its own `keystone/…` keys and `Keystone` icon theme, so the two plugins don't overwrite each other |
 | Translations | English, Polish | English only (for now) |
 
 The changed code is in `ribbon.py` (rewritten), `layouts.py` and `attributes_pane.py` (new), `panes.py` (docking), `plugin.py`, `__init__.py` and
@@ -279,24 +286,27 @@ Install from ZIP*. The plugin is marked experimental: if it isn't listed, tick *
 plugins* in the Settings tab.
 
 **From source:** copy this repository into your QGIS profile's `python/plugins` folder as
-`workspace_ribbon` (on Windows, `%APPDATA%\QGIS\QGIS4\profiles\default\python\plugins`, or `QGIS3` for
+`keystone` (on Windows, `%APPDATA%\QGIS\QGIS4\profiles\default\python\plugins`, or `QGIS3` for
 QGIS 3) and enable it in the Plugin Manager.
 
-Switch it on or off from *Plugins › Workspace Ribbon › Workspace Ribbon* or *Project › Workspace Ribbon*.
+Switch it on or off from *Plugins › Keystone › Keystone* or *Project › Keystone*.
 
 ## Notes
 
-- Disable ArcSkin (or CyanSkin) in the Plugin Manager when you use Workspace Ribbon.
+- Disable ArcSkin (or CyanSkin) in the Plugin Manager when you use Keystone.
 - A ribbon button whose QGIS tool doesn't exist in your QGIS version is left out rather than shown
   broken.
 - The screenshots were taken with [`scripts/capture_screenshots.py`](scripts/capture_screenshots.py),
   run from the QGIS Python console on demo data over OpenStreetMap.
 
+- Not affiliated with or endorsed by Esri. ArcGIS and ArcGIS Pro are trademarks of Esri; they are
+  named only to describe what the layout will feel familiar to.
+
 ## Credits and licence
 
 - [ArcSkin](https://github.com/envirosolutionspl/arcskin) by [EnviroSolutions](https://github.com/envirosolutionspl),
   GPL-2.0-or-later: theme, icons, panes, status bar, basemaps, symbology and the original ribbon.
-- Workspace Ribbon changes by Charles, GPL-2.0-or-later. See [LICENSE](LICENSE).
+- Keystone changes by Charles, GPL-2.0-or-later. See [LICENSE](LICENSE).
 - Basemap in the screenshots © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
 
 Not affiliated with or endorsed by Esri. ArcGIS and ArcGIS Pro are trademarks of Esri.

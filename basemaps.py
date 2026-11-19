@@ -19,7 +19,8 @@ from qgis.PyQt.QtWidgets import (
 
 from .util import pro_icon, tr
 
-MARKER = "workspace_ribbon/basemap"  # custom property of layers added here
+MARKER = "keystone/basemap"  # custom property of layers added here
+OLD_MARKER = "workspace_ribbon/basemap"  # basemaps added before the rename
 OPENFREEMAP = "https://tiles.openfreemap.org"
 OPENFREEMAP_CREDITS = ("OpenFreeMap © OpenMapTiles "
                        "Data from © OpenStreetMap contributors")
@@ -105,7 +106,7 @@ def set_basemap(iface, name, uri, attribution):
     """Replace the current basemap with ``uri`` (``None`` only removes)."""
     project = QgsProject.instance()
     old = [lid for lid, layer in project.mapLayers().items()
-           if layer.customProperty(MARKER)]
+           if layer.customProperty(MARKER) or layer.customProperty(OLD_MARKER)]
     project.removeMapLayers(old)
     if uri is None:
         return
@@ -115,7 +116,7 @@ def set_basemap(iface, name, uri, attribution):
         layer = QgsRasterLayer(uri, name, "wms")
     if layer is None or not layer.isValid():
         iface.messageBar().pushWarning(
-            "Workspace Ribbon", tr("Basemap “{}” is unavailable.").format(name)
+            "Keystone", tr("Basemap “{}” is unavailable.").format(name)
         )
         return
     layer.setCustomProperty(MARKER, True)
