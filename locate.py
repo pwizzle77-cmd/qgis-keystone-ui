@@ -13,8 +13,14 @@ Type and press Enter. Searched, in this order:
   ParcelID, PIN… or Name on a layer called Parcels), e.g. the Parcel Fabric
   plugin's Parcels: the number as typed, with or without the
   section-township-range part.
+* **Other layers** — every other layer on the map, in all of its fields:
+  each word must be in one of the feature's fields ("oak elementary"
+  finds a school named Oak Grove Elementary).
 * **OpenStreetMap** — when nothing local matches, a button searches
   OpenStreetMap (Nominatim) for a place or address.
+
+**Search in** narrows the search to one layer, and **Field** to one of its
+fields (or all of them). Then only that layer is searched.
 
 Click a result to zoom to it; it flashes, and a pin marks coordinates and
 places.
@@ -29,12 +35,12 @@ from qgis.core import (
     QgsFeatureRequest, QgsGeometry, QgsPointXY, QgsProject, QgsRectangle,
     QgsVectorLayer,
 )
-from qgis.gui import QgsVertexMarker
+from qgis.gui import QgsMapLayerComboBox, QgsVertexMarker
 from qgis.PyQt import sip
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtWidgets import (
-    QApplication, QDockWidget, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QApplication, QComboBox, QDockWidget, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -134,6 +140,41 @@ def _concat(layer, parts, mapping=None):
     return "lower(concat(" + ", ' ', ".join(present) + "))"
 
 
+# Field types that hold no searchable text.
+_SKIP_TYPES = ("binary", "blob", "geometry", "bytea", "raster")
+LAYER_LIMIT = 10          # results per layer when searching all layers
+# Web services are left out of the all-layers search (each search would be a
+# request per layer); picking one under Search in still searches it.
+REMOTE_PROVIDERS = ("WFS", "wfs", "arcgisfeatureserver", "oapif", "vectortile")
+
+
+def _searchable_fields(layer):
+    """Names of the fields worth searching (not binary or geometry)."""
+    return [f.name() for f in layer.fields()
+            if (f.typeName() or "").lower() not in _SKIP_TYPES]
+
+
+def _words_in_fields(fields, words):
+    """Every word in at least one of the fields (any case)."""
+    if not fields or not words:
+        return None
+    parts = []
+    for word in words:
+        like = QgsExpression.quotedString("%" + word + "%")
+        parts.append("(" + " OR ".join(
+            f"to_string({QgsExpression.quotedColumnRef(name)}) ILIKE {like}"
+            for name in fields) + ")")
+    return " AND ".join(parts)
+
+
+def _layer_filter():
+    flags = getattr(Qgis, "LayerFilter", None)
+    if flags is not None:
+        return flags.HasGeometry
+    from qgis.core import QgsMapLayerProxyModel
+    return QgsMapLayerProxyModel.HasGeometry
+
+
 def _all_words(expression, words):
     return " AND ".join(
         f"{expression} ILIKE {QgsExpression.quotedString('%' + w + '%')}"
@@ -162,13 +203,34 @@ class LocatePane(QDockWidget):
         go.clicked.connect(self.run)
         row.addWidget(go)
         box.addLayout(row)
+        scope = QHBoxLayout()
+        scope.addWidget(QLabel(tr("Search in")))
+        self.layer_box = QgsMapLayerComboBox()
+        self.layer_box.setFilters(_layer_filter())
+        try:
+            self.layer_box.setAllowEmptyLayer(True, tr("All layers"))
+        except TypeError:           # QGIS before 3.24: no text for the empty entry
+            self.layer_box.setAllowEmptyLayer(True)
+        self.layer_box.setLayer(None)
+        self.layer_box.setToolTip(tr("All layers: addresses, streets, parcels, "
+                                     "coordinates and every other layer. Pick a "
+                                     "layer to search only that one."))
+        self.layer_box.layerChanged.connect(self._layer_picked)
+        scope.addWidget(self.layer_box, 2)
+        self.field_label = QLabel(tr("Field"))
+        scope.addWidget(self.field_label)
+        self.field_box = QComboBox()
+        self.field_box.setToolTip(tr("Search one field of the layer, or all of them"))
+        self.field_box.currentIndexChanged.connect(lambda *_: self._update_hint())
+        scope.addWidget(self.field_box, 1)
+        box.addLayout(scope)
         self.tree = QTreeWidget()
         self.tree.setHeaderHidden(True)
         self.tree.itemClicked.connect(self.go_to)
         self.tree.itemActivated.connect(self.go_to)
         box.addWidget(self.tree, 1)
         self.status = QLabel(tr("Examples: 123 Main, Main St, 02942-000, "
-                                "30.19, -82.64"))
+                                "30.19, -82.64, Oak Elementary"))
         self.status.setWordWrap(True)
         box.addWidget(self.status)
         self.web = QPushButton(tr("Search OpenStreetMap"))
@@ -178,6 +240,40 @@ class LocatePane(QDockWidget):
         self.web.hide()
         box.addWidget(self.web)
         self.setWidget(body)
+        self._layer_picked(None)
+
+    # ------------------------------------------------------------ scope
+    def _layer_picked(self, layer):
+        self.field_box.blockSignals(True)
+        self.field_box.clear()
+        self.field_box.addItem(tr("All fields"), "")
+        if isinstance(layer, QgsVectorLayer):
+            for name in _searchable_fields(layer):
+                alias = layer.attributeDisplayName(layer.fields().lookupField(name))
+                self.field_box.addItem(alias if alias == name else f"{alias} ({name})", name)
+        self.field_box.blockSignals(False)
+        picked = isinstance(layer, QgsVectorLayer)
+        self.field_box.setEnabled(picked)
+        self.field_label.setEnabled(picked)
+        self._update_hint()
+
+    def _scope(self):
+        """(layer, field): (None, "") searches everything."""
+        layer = self.layer_box.currentLayer()
+        if not isinstance(layer, QgsVectorLayer):
+            return None, ""
+        return layer, self.field_box.currentData() or ""
+
+    def _update_hint(self):
+        layer, field = self._scope()
+        if layer is None:
+            self.search.setPlaceholderText(
+                tr("Address, street, parcel, coordinates, or any text"))
+        elif field:
+            self.search.setPlaceholderText(
+                tr("Search {} in {}").format(self.field_box.currentText(), layer.name()))
+        else:
+            self.search.setPlaceholderText(tr("Search all fields of {}").format(layer.name()))
 
     # ------------------------------------------------------------ searching
     def run(self):
@@ -190,11 +286,16 @@ class LocatePane(QDockWidget):
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             total = 0
-            for title, results in (
-                    (tr("Coordinates"), self.find_coordinates(text)),
-                    (tr("Addresses"), self.find_addresses(text)),
-                    (tr("Streets"), self.find_streets(text)),
-                    (tr("Parcels"), self.find_parcels(text))):
+            layer, field = self._scope()
+            if layer is not None:
+                groups = [(layer.name(), self.find_in_layer(layer, text, field, MAX_RESULTS))]
+            else:
+                groups = [(tr("Coordinates"), self.find_coordinates(text)),
+                          (tr("Addresses"), self.find_addresses(text)),
+                          (tr("Streets"), self.find_streets(text)),
+                          (tr("Parcels"), self.find_parcels(text))]
+                groups += self.find_in_other_layers(text)
+            for title, results in groups:
                 if results:
                     total += len(results)
                     self._add_group(title, results)
@@ -207,6 +308,8 @@ class LocatePane(QDockWidget):
             if total == 1 and first is not None:
                 self.tree.setCurrentItem(first)
                 self.go_to(first)
+        elif self._scope()[0] is not None:
+            self.status.setText(tr("Nothing found in {}.").format(self._scope()[0].name()))
         else:
             self.status.setText(tr("Nothing found in the map's layers."))
             self.web.show()
@@ -330,6 +433,54 @@ class LocatePane(QDockWidget):
             if len(out) >= MAX_RESULTS:
                 break
         return out[:MAX_RESULTS]
+
+    def find_in_layer(self, layer, text, field="", limit=LAYER_LIMIT):
+        """Features of one layer whose field (or any field) holds every word."""
+        words = _words(text)
+        fields = [field] if field else _searchable_fields(layer)
+        expr = _words_in_fields(fields, words)
+        if not expr:
+            return []
+        display = QgsExpression(layer.displayExpression() or "")
+        ctx = QgsExpressionContext(
+            QgsExpressionContextUtils.globalProjectLayerScopes(layer))
+
+        def label(feature):
+            text_out = ""
+            if field:
+                text_out = str(feature.attribute(field) or "")
+            if display.expression():
+                ctx.setFeature(feature)
+                shown = str(display.evaluate(ctx) or "").strip()
+                if shown and shown != text_out:
+                    text_out = f"{text_out}  –  {shown}" if text_out else shown
+            if not text_out:
+                for name in fields:          # the first field that matched
+                    value = str(feature.attribute(name) or "")
+                    if all(w in value.lower() for w in words if w):
+                        text_out = value
+                        break
+            return re.sub(r"\s+", " ", text_out).strip() or str(feature.id())
+        try:
+            return self._query(layer, expr, label, limit)
+        except Exception:  # noqa: BLE001 - a layer that can't run the filter
+            return []
+
+    def find_in_other_layers(self, text):
+        """[(layer name, results)] for the layers the address, street and
+        parcel searches don't already cover."""
+        covered = {lyr.id() for lyr, _m in _address_layers()}
+        covered |= {lyr.id() for lyr in _street_layers()}
+        out = []
+        for layer in _vector_layers():
+            if layer.id() in covered or _field(layer, PARCEL_FIELDS):
+                continue
+            if layer.providerType() in REMOTE_PROVIDERS:
+                continue   # slow over the network; pick the layer in Search in instead
+            results = self.find_in_layer(layer, text)
+            if results:
+                out.append((layer.name(), results))
+        return out
 
     def search_web(self):
         text = self.search.text().strip()

@@ -158,6 +158,12 @@ and how to use it.
     field (FULLNAME…), each street once, zooming to all its segments;
   - **parcels** (*12-4S-16-02942-000* or part of it): layers with a parcel-number field (ParcelNo,
     ParcelID, PIN…).
+  - **every other layer**, in all of its fields (*oak elementary* finds a school named Oak Grove
+    Elementary). Web services (WFS, ArcGIS feature services) are left out here because each search
+    would go over the network.
+
+  **Search in** picks where to look: **All layers** (the default) or one layer, and **Field** narrows
+  that layer to one field or **All fields**. With a layer picked, only that layer is searched.
 
   Click a result to zoom to it; features flash and coordinates get a pin. When nothing matches, a
   button searches OpenStreetMap.
