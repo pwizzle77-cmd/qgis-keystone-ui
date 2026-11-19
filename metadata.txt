@@ -4,13 +4,14 @@ qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=Every tool where you expect it: turns QGIS into an organized, ribbon-based workspace with labelled tabs, contextual layer tabs, one-click map sheets, a Locate search box, an Attributes pane and room to work. Switch it off and QGIS is exactly as it was.
 about=Keystone (formerly Workspace Ribbon) replaces QGIS's menu bar and toolbars with an organized ribbon: Map, Insert, Layout, Analysis, View, Edit, Imagery, Share and Help, plus Parcels and Addressing tabs for the Parcel Fabric and NENA Addressing and RCL Tools plugins, Align Edge and COGO Workbench on the Edit tab, and an Add-ins tab only for plugins it doesn't know. Selecting a layer in Contents adds contextual tabs (Feature Layer: Appearance, Labeling, Data; Raster Layer; Standalone Table). For map creation, New Layout opens a gallery of ANSI and ISO page sizes that builds a finished map sheet (map, title, legend, north arrow, scale bar, footer) or a blank page, lists your own .qpt templates, and Export Layout writes one or all layouts to PDF. For room to work, double-click a tab or press Ctrl+F1 to collapse the ribbon, and use View > Maximize Map to hide all panes. Switching it off restores QGIS exactly as it was. Built on ArcSkin by EnviroSolutions (GPL-2.0-or-later): its light theme, Pro-style icons, panes, map status bar, basemaps and symbology. Replaces ArcSkin; switch one of them on at a time. Feels familiar if you come from ArcGIS Pro. Not affiliated with or endorsed by Esri; ArcGIS and ArcGIS Pro are trademarks of Esri.
-version=0.4.0
+version=0.4.1
 author=Charles
 email=pwizzle77@gmail.com
 homepage=https://github.com/pwizzle77-cmd/qgis-keystone
 repository=https://github.com/pwizzle77-cmd/qgis-keystone
 tracker=https://github.com/pwizzle77-cmd/qgis-keystone/issues
 changelog=
+    0.4.1 - Layer names are readable when Windows is in dark mode. The light skin now also gives QGIS a light colour palette (QGIS colours layer names from the palette, which dark mode made white on the skin's white panels); switching the skin off gives the old palette back.
     0.4.0 - Renamed from Workspace Ribbon to Keystone (plugin folder keystone). Settings, the window layout to restore, basemaps and feature-template presets carry over; remove the old workspace_ribbon plugin.
     0.3.3 - Locate: Search in All layers (now also every other layer, in all its fields) or one layer, and in one field or all of its fields.
     0.3.2 - Edit tab has a Selection group (Select and Clear), as in Pro, so you can pick or clear features, or leave Align Edge, without going back to the Map tab.

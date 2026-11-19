@@ -37,6 +37,7 @@ from .panes import arrange_panes
 from .progress import Progress
 from .rubber_band import apply_esri_rubber_band
 from .ribbon import build_ribbon
+from .palette import LightPalette
 from .stylesheet import StyleSheetBlock
 from .symbology import ProSymbology
 from .util import Changes, tr
@@ -79,17 +80,23 @@ def migrate_old_settings() -> int:
     return copied
 
 
+def theme_variables(theme: str) -> dict:
+    """The theme's ``@name: value;`` colours from its ``variables.qss``."""
+    theme_dir = PLUGIN_DIR / "resources" / "themes" / theme
+    return dict(
+        VARIABLE_RE.findall(
+            (theme_dir / "variables.qss").read_text(encoding="utf-8")
+        )
+    )
+
+
 def load_qss(theme: str) -> str:
     """Return the theme's style sheet with ``@name`` variables substituted.
 
     ``@icons`` expands to the plugin's icon directory, for ``url()`` values.
     """
     theme_dir = PLUGIN_DIR / "resources" / "themes" / theme
-    variables = dict(
-        VARIABLE_RE.findall(
-            (theme_dir / "variables.qss").read_text(encoding="utf-8")
-        )
-    )
+    variables = theme_variables(theme)
     variables["icons"] = (PLUGIN_DIR / "resources" / "icons").as_posix()
     qss = (theme_dir / "style.qss").read_text(encoding="utf-8")
     return re.sub(
@@ -182,6 +189,10 @@ class KeystonePlugin:
             steps = [
                 (8, lambda: changes.add(
                     StyleSheetBlock(win, load_qss(THEME)).remove)),
+                # Light text colours for views that read the palette, not the
+                # sheet (layer names in the Layers panel under Windows dark mode).
+                (1, lambda: changes.add(
+                    LightPalette(win, theme_variables(THEME)).remove)),
                 (5, lambda: apply_icon_theme(self.iface, changes)),
                 (1, lambda: WindowDresser(self.iface, changes)),
                 (1, lambda: attributes_pane(self.iface, changes)),
