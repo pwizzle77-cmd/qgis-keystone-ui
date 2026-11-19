@@ -56,7 +56,7 @@ The Parcels and Addressing tabs appear when those plugins are installed.
 [COGO Workbench](https://github.com/pwizzle77-cmd/qgis_cogo_workbench) go on the Edit tab, where Pro
 users look for them.
 
-**Edit** — editing tools, snapping, Align Edge and COGO in one place:
+**Edit** — editing tools, snapping, a Selection group (Select, Clear), Align Edge and COGO in one place:
 
 ![Edit tab](docs/images/tab-edit.png)
 
@@ -251,7 +251,7 @@ Changed or added:
 | Layouts | New Layout and Layout Manager buttons | New Layout gallery with finished map sheets in ANSI and ISO sizes, My Templates, Import Template, Open Layout list, Export Layout (one or all to PDF) |
 | Workspace | — | Collapsible ribbon (double-click, Ctrl+F1, peek on click), Maximize Map, Map Only, Full Screen |
 | Quick Access row | New, Open, Save, Undo, Redo | Adds Save All (Ctrl+Alt+S: every layer's edits and the project), Toggle Editing and Save Edits, and the collapse button |
-| Edit tab | Tools and Modify groups | Tools (with Align Edge and Advanced Digitizing), a COGO group, Attributes in Features, as in Pro |
+| Edit tab | Tools and Modify groups | Tools (with Align Edge and Advanced Digitizing), a COGO group, a Selection group (Select, Clear), Attributes in Features, as in Pro |
 | Selection / Labeling | Basic | Pro captions (Select By Attributes / Location, Switch), label Show/Hide, Rotate and Properties |
 | Share tab | Image, PDF, DXF, Layout | Adds Export Layout and Package Layers |
 | Attributes pane | — | Pro-style Attributes pane for the selection: feature list, vertical fields in the layer's form, multi-edit, Auto Apply |

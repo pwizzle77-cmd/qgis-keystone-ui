@@ -269,6 +269,13 @@ RIBBON = [
              "multi_edit",
              tr("Attributes")),
         ]),
+        # As on Pro's Edit tab: pick features or drop the selection without
+        # going back to the Map tab (also the way out of Align Edge).
+        (tr("Selection"), [
+            ("mActionSelectFeatures menu:mMenuSelect", "L", "select",
+             tr("Select")),
+            ("mActionDeselectAll", "L", "clear_selection", tr("Clear")),
+        ]),
         (tr("Tools"), [
             ("mActionAlignEdge plugin:align_edge.settings_action", "L",
              None, tr("Align\nEdge")),
