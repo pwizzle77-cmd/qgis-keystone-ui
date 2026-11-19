@@ -7,9 +7,9 @@ about=Keystone (formerly Workspace Ribbon) replaces QGIS's menu bar and toolbars
 version=0.4.0
 author=Charles
 email=pwizzle77@gmail.com
-homepage=https://github.com/pwizzle77-cmd/qgis-keystone
-repository=https://github.com/pwizzle77-cmd/qgis-keystone
-tracker=https://github.com/pwizzle77-cmd/qgis-keystone/issues
+homepage=https://github.com/pwizzle77-cmd/qgis-keystone-ui
+repository=https://github.com/pwizzle77-cmd/qgis-keystone-ui
+tracker=https://github.com/pwizzle77-cmd/qgis-keystone-ui/issues
 changelog=
     0.4.0 - Renamed from Workspace Ribbon to Keystone (plugin folder keystone). Settings, the window layout to restore, basemaps and feature-template presets carry over; remove the old workspace_ribbon plugin.
     0.3.3 - Locate: Search in All layers (now also every other layer, in all its fields) or one layer, and in one field or all of its fields.
