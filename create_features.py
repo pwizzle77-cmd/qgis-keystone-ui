@@ -35,8 +35,9 @@ from qgis.PyQt.QtWidgets import (
 from .util import pro_icon, tr
 
 OBJECT_NAME = "WorkspaceCreateFeatures"
-PRESET_KEY = "presets"           # project entry scope "workspace_ribbon"
-SCOPE = "workspace_ribbon"
+PRESET_KEY = "presets"           # project entry scope "keystone"
+SCOPE = "keystone"
+OLD_SCOPE = "workspace_ribbon"  # projects saved before the rename
 LAYER_ROLE = Qt.ItemDataRole.UserRole
 KEY_ROLE = Qt.ItemDataRole.UserRole + 1
 PRESET_ROLE = Qt.ItemDataRole.UserRole + 2
@@ -123,6 +124,8 @@ def _templates(layer):
 
 def load_presets():
     raw, ok = QgsProject.instance().readEntry(SCOPE, PRESET_KEY, "")
+    if not (ok and raw):
+        raw, ok = QgsProject.instance().readEntry(OLD_SCOPE, PRESET_KEY, "")
     try:
         data = json.loads(raw) if ok and raw else {}
     except (TypeError, ValueError):

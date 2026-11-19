@@ -28,18 +28,19 @@ from qgis.PyQt.QtWidgets import QAbstractButton, QApplication
 
 from .util import tr
 
-THEME = "WorkspaceRibbon"
+THEME = "Keystone"
+OLD_THEME = "WorkspaceRibbon"   # the theme folder's name before the rename
 SOURCE = Path(__file__).resolve().parent / "resources" / "qgis_theme"
 THEME_KEY = "UI/UITheme"
 # UI theme before the skin; kept in settings so that disabling the skin
 # after a QGIS restart (when the theme is already ArcSkin) restores it.
-ORIGINAL_KEY = "workspace_ribbon/original_ui_theme"
+ORIGINAL_KEY = "keystone/original_ui_theme"
 DEFAULT_ICONS = ":/images/themes/default"
 # Application property: the restart notice was handled in this QGIS session.
 NOTICE = "wrRestartNotice"
 # File in the theme folder: plugin version and icon set ("pro" or "qgis")
 # the folder holds, so that ~1000 files are not written again needlessly.
-MARKER = "workspace_ribbon.version"
+MARKER = "keystone.version"
 
 
 # Cache key of each QGIS icon handed out -> its Pro theme file, while the
@@ -101,7 +102,7 @@ def _write(files):
         QgsMessageLog.logMessage(
             tr("{} icon files could not be written, e.g. {}").format(
                 len(failed), failed[0]),
-            "Workspace Ribbon", Qgis.MessageLevel.Warning)
+            "Keystone", Qgis.MessageLevel.Warning)
     return not failed
 
 
@@ -168,7 +169,7 @@ def apply_icon_theme(iface, changes):
     previous_setting = settings.value(THEME_KEY)
     if settings.value(ORIGINAL_KEY) is None:
         settings.setValue(ORIGINAL_KEY, previous_setting
-                          if previous_setting not in (None, THEME)
+                          if previous_setting not in (None, THEME, OLD_THEME)
                           else "default")
     target = install_icon_theme()
     QgsApplication.setThemeName(THEME)
@@ -178,6 +179,8 @@ def apply_icon_theme(iface, changes):
         # Runs after the swaps below are undone. Icons QGIS cached from the
         # theme folder keep reading it, so it gets QGIS's own icons.
         original = settings.value(ORIGINAL_KEY, "default")
+        if original in (THEME, OLD_THEME):
+            original = "default"
         QgsApplication.setThemeName(original)
         settings.setValue(THEME_KEY, original)
         settings.remove(ORIGINAL_KEY)
@@ -198,6 +201,6 @@ def apply_icon_theme(iface, changes):
         app.setProperty(NOTICE, True)
         if previous_setting != THEME:
             iface.messageBar().pushMessage(
-                "Workspace Ribbon", tr("Layer icons in Contents and Catalog change "
+                "Keystone", tr("Layer icons in Contents and Catalog change "
                               "after restarting QGIS."),
                 Qgis.MessageLevel.Info, 10)

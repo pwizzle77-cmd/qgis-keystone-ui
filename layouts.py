@@ -269,7 +269,7 @@ def load_template(iface, path):
     ok = result[1] if isinstance(result, tuple) else bool(result)
     if not ok:
         iface.messageBar().pushWarning(
-            tr("Workspace Ribbon"),
+            tr("Keystone"),
             tr("Could not read the layout template {}").format(path))
         return None
     manager = project.layoutManager()
