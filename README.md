@@ -129,7 +129,13 @@ As in Pro, selecting features opens an **Attributes** pane (tabbed with the Cata
   New features get them for every field they leave empty. They're saved in the project.
 - While a construction tool is active, a **sketch toolbar** floats at the bottom of the map: Line,
   Arc, Bézier, Freehand, Trace, Snapping, Advanced Digitizing (constraints), Undo vertex, **Finish
-  (F2)** and Cancel.
+  (F2)** and Cancel. With the Vertex tool (Pro's Edit Vertices) it shows Snapping, Advanced
+  Digitizing, Vertex Editor, Delete vertex, Undo, Finish (F2) and Cancel.
+- **Selection chip**: click with the Select tool and the top-most feature is selected, on any
+  selectable layer (not just the active one). Where several features overlap, a small chip with the
+  number of features appears next to the cursor; click it for a list grouped by layer, hover an entry
+  to highlight it on the map and click to select that feature instead. Shift/Ctrl clicks are left to
+  QGIS.
 
 *Edit › Features › Modify* opens the **Modify Features** pane: every editing tool in one searchable
 list, grouped as in Pro (General, Alignment, Construct, Divide, Reshape, Attributes, COGO and
