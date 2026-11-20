@@ -1,18 +1,16 @@
 """Modify Features pane, like ArcGIS Pro's.
 
 All the editing tools in one searchable list, grouped as in Pro (General,
-Alignment, Construct, Divide, Reshape, Attributes, COGO and parcel
-tools). Clicking a tool starts it; the panel under the list says what the
-tool does and how to use it on the map. Tools QGIS or a plugin doesn't
-have in this session are left out.
+Alignment, Construct, Divide, Reshape and Attributes). Clicking a tool
+starts it; the panel under the list says how to use it on the map.
+Tools QGIS doesn't have in this session are left out.
 """
 
-from qgis import utils as qgis_utils
 from qgis.PyQt import sip
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QAction
 from qgis.PyQt.QtWidgets import (
-    QDockWidget, QLabel, QLineEdit, QSplitter, QToolBar, QTreeWidget,
+    QDockWidget, QLabel, QLineEdit, QSplitter, QTreeWidget,
     QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -23,8 +21,7 @@ ACTION_ROLE = Qt.ItemDataRole.UserRole
 HELP_ROLE = Qt.ItemDataRole.UserRole + 1
 
 # Group -> [(source, Pro icon or None for the action's own, name, help)].
-# source: QGIS action name, "dock:<name>", "plugin:<id>.<attr>",
-# "bar:<toolbar>/<text>" or "pane:<object name>".
+# source: QGIS action name, "dock:<name>" or "pane:<object name>".
 TOOLS = [
     (tr("General"), [
         ("mActionMoveFeature", "move", tr("Move"),
@@ -47,9 +44,6 @@ TOOLS = [
          tr("Delete the selected features.")),
     ]),
     (tr("Alignment"), [
-        ("mActionAlignEdge", None, tr("Align Edge"),
-         tr("Hover an edge to preview it and the edge it will snap to; "
-            "click to align. Tab cycles targets.")),
         ("TopologicalEditingAction", "topological_editing",
          tr("Topological Editing"),
          tr("Shared edges and vertices move together when you edit one "
@@ -73,20 +67,9 @@ TOOLS = [
     ]),
     (tr("Divide"), [
         ("mActionSplitFeatures", "split", tr("Split"),
-         tr("Draw a line across features to split them. Road ranges are "
-            "re-divided by the NENA tools.")),
+         tr("Draw a line across features to split them.")),
         ("mActionSplitParts", "split_parts", tr("Split Parts"),
          tr("Draw a line to split parts of a multipart feature.")),
-        ("plugin:nena_addressing_and_rcl_tools.act_split_tool", None,
-         tr("Split & Re-range (NENA)"),
-         tr("Click a centerline where it should be split; both pieces are "
-            "re-ranged.")),
-        ("bar:ParcelFabricToolbar/Split Parcel", None, tr("Split Parcel"),
-         tr("Cut a parcel with a line you draw; the pieces become new "
-            "parcels.")),
-        ("bar:ParcelFabricToolbar/Divide Parcel", None, tr("Divide Parcel"),
-         tr("Divide a parcel into equal areas, equal widths or set-area "
-            "lots.")),
     ]),
     (tr("Reshape"), [
         ("mActionReshapeFeatures", "reshape", tr("Reshape"),
@@ -99,8 +82,7 @@ TOOLS = [
         ("mActionChamferFillet", "fillet", tr("Fillet / Chamfer"),
          tr("Round or bevel the corner at a vertex.")),
         ("mActionReverseLine", "reverse_line", tr("Reverse Direction"),
-         tr("Click a line to reverse its direction. For centerlines use "
-            "NENA's Reverse, which also swaps the sides.")),
+         tr("Click a line to reverse its direction.")),
         ("mActionDeletePart", "delete_part", tr("Delete Part"),
          tr("Click a part of a multipart feature to delete it.")),
         ("mActionDeleteRing", "delete_ring", tr("Delete Ring"),
@@ -118,24 +100,7 @@ TOOLS = [
         ("mActionOpenFieldCalc", "field_calculator", tr("Calculate Field"),
          tr("Compute field values with an expression.")),
     ]),
-    (tr("COGO and parcels"), [
-        ("plugin:cogo_workbench.action", None, tr("COGO Workbench"),
-         tr("Enter bearings and distances to construct lines.")),
-        ("bar:ParcelFabricToolbar/Traverse", None, tr("Traverse"),
-         tr("Enter the courses from a plat or deed to create fabric "
-            "lines.")),
-        ("bar:ParcelFabricToolbar/Merge Parcels", None, tr("Merge Parcels"),
-         tr("Combine touching parcels into one.")),
-        ("bar:ParcelFabricToolbar/Copy Parallel", None,
-         tr("Copy Parallel (fabric)"),
-         tr("Offset copies of fabric lines (easements, right of way).")),
-    ]),
 ]
-
-
-def _plain(text):
-    return text.replace("&&", "\0").replace("&", "").replace("\0", "&") \
-        .rstrip(".…")
 
 
 def resolve_source(win, source):
@@ -145,18 +110,6 @@ def resolve_source(win, source):
     if source.startswith("dock:"):
         dock = win.findChild(QDockWidget, source[5:])
         return dock.toggleViewAction() if dock else None
-    if source.startswith("plugin:"):
-        plugin_id, _, attr = source[7:].partition(".")
-        action = getattr(qgis_utils.plugins.get(plugin_id), attr, None)
-        return action if isinstance(action, QAction) \
-            and not sip.isdeleted(action) else None
-    if source.startswith("bar:"):
-        bar_name, _, text = source[4:].partition("/")
-        bar = win.findChild(QToolBar, bar_name)
-        for action in (bar.actions() if bar else []):
-            if _plain(action.text()) == text:
-                return action
-        return None
     return win.findChild(QAction, source)
 
 

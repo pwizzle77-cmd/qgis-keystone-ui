@@ -21,7 +21,7 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QAction, QColor, QFont
-from qgis.PyQt.QtWidgets import QFileDialog, QMenu
+from qgis.PyQt.QtWidgets import QFileDialog, QMenu, QMessageBox
 from qgis.PyQt.QtXml import QDomDocument
 
 from .util import pro_icon, tr
@@ -376,7 +376,7 @@ def export_layouts_menu(iface, parent):
     def export_one(layout):
         path, _ = QFileDialog.getSaveFileName(
             iface.mainWindow(), tr("Export Layout to PDF"),
-            str(_default_folder() / f"{layout.name()}.pdf"), "PDF (*.pdf)")
+            str(_default_folder() / f"{_safe(layout.name())}.pdf"), "PDF (*.pdf)")
         if not path:
             return
         if _export_pdf(iface, layout, path):
@@ -393,8 +393,17 @@ def export_layouts_menu(iface, parent):
             str(_default_folder()))
         if not folder:
             return
-        failed = [lay.name() for lay in layouts if not _export_pdf(
-            iface, lay, str(Path(folder) / f"{_safe(lay.name())}.pdf"))]
+        targets = _pdf_targets(layouts, folder)
+        existing = [path.name for _, path in targets if path.exists()]
+        if existing:
+            answer = QMessageBox.question(
+                iface.mainWindow(), tr("Replace existing PDFs?"),
+                tr("These files already exist:\n{}\n\nReplace them?").format("\n".join(existing)),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No)
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+        failed = [lay.name() for lay, path in targets if not _export_pdf(iface, lay, str(path))]
         if failed:
             bar.pushWarning(tr("Export Layout"),
                             tr("Not exported: {}").format(", ".join(failed)))
@@ -428,4 +437,24 @@ def _default_folder():
 
 
 def _safe(name):
-    return "".join(c if c not in '<>:"/\\|?*' else "_" for c in name)
+    name = "".join(c if ord(c) >= 32 and c not in '<>:"/\\|?*' else "_" for c in name).strip().rstrip(" .")
+    name = name or "Layout"
+    if name.split(".")[0].upper() in {"CON", "PRN", "AUX", "NUL", "CLOCK$", "CONIN$", "CONOUT$"} \
+            or name.split(".")[0].upper() in {f"{prefix}{n}" for prefix in ("COM", "LPT") for n in range(1, 10)}:
+        name = "_" + name
+    return name
+
+
+def _pdf_targets(layouts, folder):
+    """Reserve unique filenames for the whole batch, including case-insensitive filesystems."""
+    used = set()
+    targets = []
+    for layout in layouts:
+        stem = _safe(layout.name())
+        filename, index = stem + ".pdf", 2
+        while filename.casefold() in used:
+            filename = f"{stem} ({index}).pdf"
+            index += 1
+        used.add(filename.casefold())
+        targets.append((layout, Path(folder) / filename))
+    return targets

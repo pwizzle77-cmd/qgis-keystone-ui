@@ -4,10 +4,8 @@ and toolbars.
 Built on ArcSkin's ribbon (EnviroSolutions, GPL-2.0-or-later) and extended
 with:
 
-* Pro's tab order with every tool in a named group (no "everything in
-  Add-ins" tab for the plugins the ribbon knows about),
-* tabs for the Parcel Fabric and NENA Addressing and RCL Tools plugins, and
-  Align Edge / COGO Workbench placed on the Edit tab where Pro users look,
+* Pro's tab order with every core tool in a named group,
+* generic Add-ins groups built from installed plugins' toolbars,
 * a Layout tab and a New Layout gallery of print-ready page templates,
 * contextual tabs (Feature Layer / Raster Layer) that appear for the layer
   selected in Contents, like Pro's Appearance, Labeling and Data tabs,
@@ -19,7 +17,6 @@ logic, shortcuts and checked state stay in one place. Icon and caption
 changes go through :class:`~.util.Changes`, which reverts them.
 """
 
-from qgis import utils as qgis_utils
 from qgis.core import (
     QgsProject, QgsRasterLayer, QgsSettings, QgsVectorLayer,
 )
@@ -62,15 +59,10 @@ ADDIN_HOSTS = {"mPluginToolBar", "mWebToolBar", "mDatabaseToolBar",
 #   menu:<name>           that QGIS menu (or a QGIS tool button's) as drop-down
 #   dock:<name>           show/hide action of that dock widget
 #   shapes:<kind>         the shape digitizing tools of that kind
-#   plugin:<id>.<attr>    a QAction attribute of a loaded plugin
-#   bar:<toolbar>/<text>  the action with that text on that toolbar
 #   fn:<key>              one of the ribbon's own commands (see _commands)
 #   gallery:basemaps, panes:reset, layouts:new|open|export  galleries
 # ``icon`` None keeps the action's own icon (used for the user's plugins).
 # --------------------------------------------------------------------------
-PF_BAR = "ParcelFabricToolbar"
-NENA_BAR = "NenaRclToolsToolbar"
-
 RIBBON = [
     (tr("Map"), [
         (tr("Clipboard"), [
@@ -270,15 +262,13 @@ RIBBON = [
              tr("Attributes")),
         ]),
         # As on Pro's Edit tab: pick features or drop the selection without
-        # going back to the Map tab (also the way out of Align Edge).
+        # going back to the Map tab.
         (tr("Selection"), [
             ("mActionSelectFeatures menu:mMenuSelect", "L", "select",
              tr("Select")),
             ("mActionDeselectAll", "L", "clear_selection", tr("Clear")),
         ]),
         (tr("Tools"), [
-            ("mActionAlignEdge plugin:align_edge.settings_action", "L",
-             None, tr("Align\nEdge")),
             ("dock:AdvancedDigitizingTools", "L", "advanced_digitizing",
              tr("Advanced\nDigitizing")),
             ("mActionMoveFeature mActionMoveFeatureCopy "
@@ -292,10 +282,6 @@ RIBBON = [
              tr("Trim/Extend")),
             ("mActionOffsetCurve", "S", "offset", tr("Offset")),
             ("mActionReverseLine", "S", "reverse_line", tr("Reverse")),
-        ]),
-        (tr("COGO"), [
-            ("plugin:cogo_workbench.action", "L", None, tr("COGO\nWorkbench")),
-            ("bar:" + PF_BAR + "/Traverse", "L", None, tr("Traverse")),
         ]),
         (tr("Modify"), [
             ("mActionAddPart", "S", "add_part", tr("Add Part")),
@@ -344,8 +330,6 @@ RIBBON = [
             ("layouts:open", "L", "print", tr("Print\nLayout")),
         ]),
     ]),
-    # Parcel Fabric and NENA tabs are built from their toolbars here.
-    ("@plugin_tabs", None),
     (tr("Help"), [
         (tr("Help"), [
             ("mActionHelpContents menu:mHelpMenu", "L", "help", tr("Help")),
@@ -357,45 +341,6 @@ RIBBON = [
             ("mActionCustomization", "S", "tool", tr("Customization")),
         ]),
     ]),
-]
-
-# The user's plugins with a toolbar of their own: tab title, toolbar name,
-# group captions (the toolbar's separators split the groups), short button
-# captions, extra groups of (caption, [names]) appended to the tab.
-PLUGIN_TABS = [
-    (tr("Parcels"), PF_BAR,
-     [tr("Fabric"), tr("Records"), tr("Parcel Tools"),
-      tr("Legal & Analysis"), tr("Numbering & QA"), tr("Settings")],
-     {"New Fabric...": tr("New Fabric"),
-      "Add Fabric to Map...": tr("Add Fabric"),
-      "Build Active Record": tr("Build"),
-      "Split Parcel": tr("Split"),
-      "Divide Parcel": tr("Divide"),
-      "Merge Parcels": tr("Merge"),
-      "Copy Parallel": tr("Copy Parallel"),
-      "Parcel Lineage": tr("Lineage"),
-      "Parcel History": tr("History"),
-      "Write Legal Description": tr("Legal\nDescription"),
-      "Compare with Existing Parcels": tr("Compare"),
-      "Least-Squares Adjustment": tr("Adjust"),
-      "Subdivide Block": tr("Subdivide"),
-      "Address Lots (NENA)": tr("Address Lots"),
-      "Assign Parcel Numbers": tr("Assign\nNumbers"),
-      "Check Fabric": tr("Check\nFabric"),
-      "Import / Export...": tr("Import/Export"),
-      "Fabric Settings...": tr("Fabric\nSettings")},
-     [(tr("COGO"), ["plugin:cogo_workbench.action"])]),
-    (tr("Addressing"), NENA_BAR,
-     [tr("Windows"), tr("Centerlines"), tr("Addressing")],
-     {},
-     [(tr("Setup"), [
-         "plugin:nena_addressing_and_rcl_tools.act_style",
-         "plugin:nena_addressing_and_rcl_tools.act_schema",
-         "plugin:nena_addressing_and_rcl_tools.act_import",
-         "plugin:nena_addressing_and_rcl_tools.act_archive",
-         "plugin:nena_addressing_and_rcl_tools.act_lookups",
-         "plugin:nena_addressing_and_rcl_tools.act_settings",
-     ])]),
 ]
 
 # Contextual tabs, shown for the layer selected in Contents, as in Pro.
@@ -536,35 +481,6 @@ def find_menu(win, name):
     return menu
 
 
-def plugin_action(spec):
-    """``<plugin id>.<attribute>`` of a loaded plugin, if it is a QAction."""
-    plugin_id, _, path = spec.partition(".")
-    obj = qgis_utils.plugins.get(plugin_id)
-    for part in path.split("."):
-        if obj is None:
-            return None
-        obj = getattr(obj, part, None)
-    if isinstance(obj, QAction) and not sip.isdeleted(obj):
-        return obj
-    return None
-
-
-def _plain(text):
-    return text.replace("&&", "\0").replace("&", "").replace("\0", "&")
-
-
-def bar_action(win, spec):
-    """``<toolbar name>/<action text>``: an action on a plugin toolbar."""
-    bar_name, _, text = spec.partition("/")
-    bar = win.findChild(QToolBar, bar_name)
-    if bar is None:
-        return None
-    for action in bar.actions():
-        if _plain(action.text()).rstrip(".…") == text:
-            return action
-    return None
-
-
 def _shape_actions(win, kind):
     """Shape digitizing tools of a kind ("circle", ...): QGIS gives them no
     object names, only their shape id as data."""
@@ -612,7 +528,7 @@ class RibbonTabBar(QTabBar):
 
 class ToolbarKeeper(QObject):
     """Keeps toolbars that now live in the ribbon hidden, also when their
-    plugin shows them again (NENA re-places its bar after start-up)."""
+    plugin shows them again after start-up."""
 
     def __init__(self, parent, bars):
         super().__init__(parent)
@@ -1148,10 +1064,6 @@ class Ribbon(QObject):
         """One action for a ribbon item name (see RIBBON)."""
         if name.startswith("fn:"):
             return self.commands.get(name[3:])
-        if name.startswith("plugin:"):
-            return plugin_action(name[7:])
-        if name.startswith("bar:"):
-            return bar_action(self.win, name[4:])
         return find_action(self.win, name)
 
     def button(self, names, size, icon, caption):
@@ -1224,7 +1136,7 @@ class Ribbon(QObject):
                 built.append((caption, buttons))
         return built
 
-    def mirror(self, bar, action, short=None, skip_placed=False):
+    def mirror(self, bar, action, skip_placed=False):
         """Ribbon button for an action on a plugin toolbar: the action
         itself, or a copy of a plain tool button the plugin put there."""
         if isinstance(action, QWidgetAction):
@@ -1232,8 +1144,7 @@ class Ribbon(QObject):
             if not isinstance(widget, QToolButton):
                 return None  # spacers and other widgets
             if widget.defaultAction():
-                return self.mirror(bar, widget.defaultAction(), short,
-                                   skip_placed)
+                return self.mirror(bar, widget.defaultAction(), skip_placed)
             button = QToolButton(autoRaise=True)
             button.setText(widget.text())
             button.setIcon(widget.icon())
@@ -1248,46 +1159,10 @@ class Ribbon(QObject):
             return None
         if skip_placed and action in self.placed:
             return None
-        if short and (caption := short.get(_plain(action.text()))):
-            self.changes.set(action, "iconText", caption)
         button = QToolButton(autoRaise=True)
         button.setDefaultAction(action)
         self.placed.append(action)
         return button
-
-    def plugin_tab(self, bar, captions, short, extra):
-        """Groups of a plugin toolbar, split at its separators: the first
-        three buttons of a group large, the rest small, as in Pro."""
-        runs, current = [], []
-        for action in bar.actions():
-            if action.isSeparator():
-                if current:
-                    runs.append(current)
-                current = []
-                continue
-            if (button := self.mirror(bar, action, short)) is not None:
-                current.append(button)
-        if current:
-            runs.append(current)
-        built = []
-        for i, buttons in enumerate(runs):
-            caption = captions[i] if i < len(captions) else bar.windowTitle()
-            built.append((caption, [(_style(b, j < 3), j < 3)
-                                    for j, b in enumerate(buttons)]))
-        for caption, names in extra:
-            buttons = []
-            for name in names:
-                action = self.resolve(name)
-                if action is None:
-                    continue
-                button = QToolButton(autoRaise=True)
-                button.setDefaultAction(action)
-                self.placed.append(action)
-                large = len(names) <= 2
-                buttons.append((_style(button, large), large))
-            if buttons:
-                built.append((caption, buttons))
-        return built
 
     def addin_groups(self, bars):
         """One group per remaining plugin toolbar: Pro's Add-ins tab."""
@@ -1305,6 +1180,7 @@ class Ribbon(QObject):
                     buttons.append((_style(button, True), True))
             if buttons:
                 groups.append((bar.windowTitle(), buttons))
+                self.absorbed.add(name)
         return groups
 
     def project_button(self):
@@ -1386,17 +1262,6 @@ class Ribbon(QObject):
         tabs.setCornerWidget(self.project_button(), Qt.Corner.TopLeftCorner)
 
         for title, groups in RIBBON:
-            if title == "@plugin_tabs":
-                for (ptitle, bar_name, captions, short,
-                     extra) in PLUGIN_TABS:
-                    bar = win.findChild(QToolBar, bar_name)
-                    if bar is None or bar.parent() is not win:
-                        continue
-                    built = self.plugin_tab(bar, captions, short, extra)
-                    if built:
-                        self.absorbed.add(bar_name)
-                        tabs.addTab(_tab(built), ptitle)
-                continue
             built = self.groups(groups)
             if built:
                 tabs.addTab(_tab(built), title)

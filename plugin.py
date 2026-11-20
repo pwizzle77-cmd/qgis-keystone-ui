@@ -3,9 +3,8 @@ reverted when switched off.
 
 Based on ArcSkin by EnviroSolutions (GPL-2.0-or-later): its theme, Pro-style
 icons, panes, map status bar, basemaps and symbology are used here with a
-reorganised ribbon (see ribbon.py) built around map creation, editing and
-the Parcel Fabric, NENA Addressing and RCL Tools, Align Edge and COGO
-Workbench plugins.
+reorganised ribbon (see ribbon.py) built around native QGIS map creation
+and editing. Installed plugin toolbars use generic Add-ins groups.
 
 A theme is a directory under ``resources/themes/<name>/`` with two files:
 

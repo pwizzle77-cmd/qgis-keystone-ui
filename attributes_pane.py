@@ -21,7 +21,7 @@ from qgis.core import (
     QgsExpression, QgsExpressionContext, QgsExpressionContextUtils,
     QgsFeatureRequest, QgsProject, QgsSettings, QgsVectorLayer,
 )
-from qgis.gui import QgsAttributeEditorContext, QgsAttributeForm
+from qgis.gui import QgsAttributeEditorContext, QgsAttributeForm, QgsEditorWidgetWrapper
 from qgis.PyQt import sip
 from qgis.PyQt.QtCore import QEvent, QObject, Qt, QTimer
 from qgis.PyQt.QtGui import QAction
@@ -83,6 +83,7 @@ class AttributesPane(QDockWidget):
         self.form = None
         self.form_layer = None
         self.form_fid = None
+        self._form_pending = False
         self._opening = False  # a select tool / dialog made the selection
         self._dirty = False    # selection changed while the pane was hidden
 
@@ -114,6 +115,11 @@ class AttributesPane(QDockWidget):
         self.apply_button = QToolButton(text=tr("Apply"))
         self.apply_button.clicked.connect(self.apply)
         bar.addWidget(self.apply_button)
+        self.discard_button = QToolButton(text=tr("Discard pending values"))
+        self.discard_button.setToolTip(tr("Reload from the layer. Previously applied layer edits are kept."))
+        self.discard_button.clicked.connect(self._discard_pending)
+        self.discard_button.hide()
+        bar.addWidget(self.discard_button)
         box.addLayout(bar)
 
         self.splitter = QSplitter(Qt.Orientation.Vertical)
@@ -220,6 +226,8 @@ class AttributesPane(QDockWidget):
         if not self.isVisible() and not self._opening:
             self._dirty = True   # rebuilt when the pane is shown
             return
+        if not self.apply():
+            return
         self._dirty = False
         keep = (self.form_layer, self.form_fid)
         self.tree.blockSignals(True)
@@ -274,9 +282,13 @@ class AttributesPane(QDockWidget):
             self.raise_()
         self._opening = False
 
-    def _item_changed(self, current, _previous):
+    def _item_changed(self, current, previous):
         self.save_timer.stop()
-        self.apply()  # pending changes of the feature being left
+        if not self.apply():
+            self.tree.blockSignals(True)
+            self.tree.setCurrentItem(previous)
+            self.tree.blockSignals(False)
+            return
         if current is None:
             self._clear_form()
             return
@@ -292,6 +304,8 @@ class AttributesPane(QDockWidget):
 
     # --------------------------------------------------------------- forms
     def _clear_form(self):
+        self.discard_button.hide()
+        self._form_pending = False
         if self.form is not None and not sip.isdeleted(self.form):
             self.form.deleteLater()
         self.form = None
@@ -357,8 +371,10 @@ class AttributesPane(QDockWidget):
             self._update_hint()
 
     def _value_changed(self, _attribute, _value, changed):
-        if changed and self.auto.isChecked() and self.form_fid is not None:
-            self.save_timer.start()
+        if changed:
+            self._form_pending = True
+            if self.auto.isChecked() and self.form_fid is not None:
+                self.save_timer.start()
 
     def apply(self):
         """Write the form's changes to the layer (edit buffer)."""
@@ -366,9 +382,27 @@ class AttributesPane(QDockWidget):
         if (form is None or layer is None or sip.isdeleted(form)
                 or sip.isdeleted(layer) or self.form_fid is None
                 or not layer.isEditable()):
-            return
-        form.save()
+            return True
+        # Embedded QGIS forms can return True without saving when a hard constraint fails.
+        blocked = self._form_pending and any(
+            editor.isBlockingCommit() for editor in form.findChildren(QgsEditorWidgetWrapper))
+        if blocked or not form.save():
+            self.hint.setText(tr("Changes were not applied. Correct the highlighted values, "
+                                 "then Apply, or discard the pending values before switching features."))
+            self.discard_button.show()
+            return False
+        self.discard_button.hide()
+        self._form_pending = False
+        self._update_hint()
         layer.triggerRepaint()
+        return True
+
+    def _discard_pending(self):
+        self.save_timer.stop()
+        if self.form is not None and not sip.isdeleted(self.form):
+            self.form.resetValues()
+        self._clear_form()
+        self.refresh()
 
     def _auto_toggled(self, on):
         QgsSettings().setValue(AUTO_KEY, on)

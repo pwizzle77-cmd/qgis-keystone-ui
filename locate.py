@@ -1,17 +1,15 @@
-"""Locate pane, like ArcGIS Pro's: one search box for the whole county.
+"""Locate pane, like ArcGIS Pro's: one search box for project layers.
 
 Type and press Enter. Searched, in this order:
 
 * **Coordinates** — latitude/longitude (decimal or degrees-minutes-seconds,
   latitude first as in Google Maps), MGRS / US National Grid, UTM.
-* **Addresses** — the address-point layer of the NENA Addressing and RCL
-  Tools plugin (its full-address field, or house number + street name),
+* **Addresses** — point layers with full-address fields or house number + street name;
   every word must match ("123 main" finds 123 NW Main St).
-* **Streets** — the NENA centerline layer: each street name once, zooming to
+* **Streets** — line layers with street-name fields: each street name once, zooming to
   all of its segments.
 * **Parcels** — polygon layers with a parcel-number field (ParcelNumber,
-  ParcelID, PIN… or Name on a layer called Parcels), e.g. the Parcel Fabric
-  plugin's Parcels: the number as typed, with or without the
+  ParcelID, PIN… or Name on a layer called Parcels): the number as typed, with or without the
   section-township-range part.
 * **Other layers** — every other layer on the map, in all of its fields:
   each word must be in one of the feature's fields ("oak elementary"
@@ -74,22 +72,6 @@ def _field(layer, names):
     return None
 
 
-def _nena_layers():
-    """(address layer, address field mapping, centerline layer) from the
-    NENA Addressing and RCL Tools project settings, when that plugin is
-    installed."""
-    try:
-        from nena_addressing_and_rcl_tools.core.project_config import (
-            layer_for, load_project_config,
-        )
-        pcfg = load_project_config()
-        return (layer_for(pcfg.streets, "address"),
-                dict(pcfg.streets.address_mapping or {}),
-                layer_for(pcfg.streets, "centerline"))
-    except Exception:  # noqa: BLE001 - plugin missing or not set up
-        return None, {}, None
-
-
 def _vector_layers(geometry=None):
     for layer in QgsProject.instance().mapLayers().values():
         if isinstance(layer, QgsVectorLayer) and layer.isSpatial() and (
@@ -98,20 +80,14 @@ def _vector_layers(geometry=None):
 
 
 def _address_layers():
-    """The NENA address layer, else point layers with an address field."""
-    layer, mapping, _ = _nena_layers()
-    if isinstance(layer, QgsVectorLayer):
-        return [(layer, mapping)]
+    """Point layers with recognizable address fields, independent of other plugins."""
     return [(lyr, {}) for lyr in _vector_layers(Qgis.GeometryType.Point)
             if _field(lyr, FULL_ADDRESS_FIELDS)
             or lyr.fields().lookupField("Add_Number") >= 0]
 
 
 def _street_layers():
-    """The NENA centerline layer, else line layers with a street name."""
-    _, _, layer = _nena_layers()
-    if isinstance(layer, QgsVectorLayer):
-        return [layer]
+    """Line layers with recognizable street-name fields."""
     return [lyr for lyr in _vector_layers(Qgis.GeometryType.Line)
             if _field(lyr, FULL_NAME_FIELDS)
             or lyr.fields().lookupField("St_Name") >= 0]

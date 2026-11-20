@@ -3,8 +3,9 @@
 **Every tool where you expect it.** Keystone turns QGIS 3.40+ and QGIS 4 into an organized,
 ribbon-based workspace: the menu bar and dozens of toolbars become labelled tabs, the right tools show
 up when you pick a layer, a print-ready map sheet is one click away, one search box finds addresses,
-streets, parcels and coordinates, and your own plugins get proper tabs instead of an "everything else"
-pile. Switch it off and QGIS is exactly as it was.
+streets, parcels and coordinates, and installed plugin toolbars appear in generic **Add-ins** groups.
+Keystone is a standalone skin: it does not require or configure any parcel or addressing plugin.
+Switch it off and QGIS is exactly as it was.
 
 If you come from ArcGIS Pro, it will feel familiar.
 
@@ -50,30 +51,18 @@ If you come from ArcGIS Pro, it will feel familiar.
 | **Layout** | Page Layout (New, Open, Import, Manager) · Map View · Export |
 | **Analysis** | Geoprocessing (Tools, ModelBuilder, History, Python) · Vector, Raster, Database, Web and Mesh tools |
 | **View** | Windows (Reset Panes and every pane) · Workspace (Maximize Map, Collapse Ribbon, Map Only, Full Screen) · 3D, Overview, Time |
-| **Edit** | Clipboard · Manage Edits · Snapping · Features · Tools (Align Edge, Advanced Digitizing, Move … Reverse) · COGO · Modify · Shapes |
+| **Edit** | Clipboard · Manage Edits · Snapping · Features · Tools (Advanced Digitizing, Move … Reverse) · Modify · Shapes |
 | **Imagery** | Add raster · Georeference, Raster Calculator, Align Rasters |
 | **Share** | Export layouts and maps (PDF, image, DXF), Package Layers · Print |
-| **Parcels** | [Parcel Fabric](https://github.com/pwizzle77-cmd/qgis_parcel_fabric): Fabric · Records · Parcel Tools · Legal & Analysis · Numbering & QA · Settings · COGO |
-| **Addressing** | [NENA Addressing and RCL Tools](https://github.com/pwizzle77-cmd/qgis-nena-addressing-tools): Windows · Centerlines · Addressing · Setup |
 | **Help** | Help · Plugins, Options, Customization |
-| **Add-ins** | Only plugins the ribbon doesn't already place somewhere else |
+| **Add-ins** | Installed plugin toolbars, grouped by their toolbar titles |
 
-The Parcels and Addressing tabs appear when those plugins are installed.
-[Align Edge](https://github.com/pwizzle77-cmd/qgis-align-edge) and
-[COGO Workbench](https://github.com/pwizzle77-cmd/qgis_cogo_workbench) go on the Edit tab, where Pro
-users look for them.
+Plugin commands keep their original actions, menus and checked/enabled state.
+Keystone does not import another plugin's configuration or calculate its data.
 
-**Edit** — editing tools, snapping, a Selection group (Select, Clear), Align Edge and COGO in one place:
+**Edit** — native editing tools, snapping and a Selection group (Select, Clear):
 
 ![Edit tab](docs/images/tab-edit.png)
-
-**Parcels** — the Parcel Fabric plugin as a tab:
-
-![Parcels tab](docs/images/tab-parcels.png)
-
-**Addressing** — NENA Addressing and RCL Tools as a tab:
-
-![Addressing tab](docs/images/tab-addressing.png)
 
 **Insert** and **View**:
 
@@ -121,6 +110,9 @@ As in Pro, selecting features opens an **Attributes** pane (tabbed with the Cata
   while open it follows every selection. Open it any time from *Map › Selection › Attributes* or
   *Edit › Features › Attributes*.
 - Buttons: Zoom to, Flash, Remove from selection, Open the attribute table (selected).
+- If pending values fail a hard constraint or cannot be saved, the form stays open
+  when you try to switch features. Correct them and Apply, or choose **Discard pending
+  values** to reload from the layer. Previously applied layer edits are kept.
 
 ## Editing: Create and Modify Features
 
@@ -145,10 +137,8 @@ As in Pro, selecting features opens an **Attributes** pane (tabbed with the Cata
   QGIS.
 
 *Edit › Features › Modify* opens the **Modify Features** pane: every editing tool in one searchable
-list, grouped as in Pro (General, Alignment, Construct, Divide, Reshape, Attributes, COGO and
-parcels), including Align Edge, the NENA Split & Re-range tool, the Parcel Fabric tools and COGO
-Workbench when those plugins are installed. Pick a tool to start it; the box below says what it does
-and how to use it.
+list of native QGIS tools, grouped into General, Alignment, Construct, Divide, Reshape and Attributes.
+Pick a tool to start it; the box below says what it does and how to use it.
 
 ## Explore and Locate
 
@@ -156,12 +146,11 @@ and how to use it.
   feature** for a **pop-up** of its fields (value maps and lookups shown as their labels). When
   several features are under the cursor, the pop-up lists them all. Its buttons zoom to, flash,
   select or open the feature in the Attributes pane. QGIS's plain Pan tool is in the drop-down.
-- **Locate** (*Map › Inquiry*) is one search box for the county:
+- **Locate** (*Map › Inquiry*) is one search box for project layers:
   - **coordinates**: latitude/longitude (decimal or DMS, latitude first, as Google Maps shows them),
     MGRS / US National Grid, UTM;
-  - **addresses** (start with the house number: *123 main*): the NENA Addressing and RCL Tools
-    address-point layer, or any point layer with an address field;
-  - **streets** (*main st*): the NENA centerline layer, or any line layer with a full street name
+  - **addresses** (start with the house number: *123 main*): point layers with address fields;
+  - **streets** (*main st*): line layers with a full street name
     field (FULLNAME…), each street once, zooming to all its segments;
   - **parcels** (*12-4S-16-02942-000* or part of it): layers with a parcel-number field (ParcelNo,
     ParcelID, PIN…).
@@ -201,6 +190,9 @@ sizes) and a footer with the date and coordinate system.
 
 Your own `.qpt` layout templates appear under **My Templates**; any template can be imported.
 **Open Layout** lists the project's layouts, and **Export Layout** writes one or all of them to PDF.
+Batch exports give colliding filenames unique numbered suffixes, including names that differ only
+in case. Existing PDFs require confirmation before replacement; declining cancels the batch.
+If a replacement basemap cannot load, the current basemap stays on the map.
 
 ![New Layout gallery](docs/images/new-layout-gallery.png)
 
@@ -256,15 +248,15 @@ Changed or added:
 
 | Area | ArcSkin 0.6.1 | Keystone |
 | --- | --- | --- |
-| Ribbon tabs | Map, Insert, Analysis, View, Edit, Share, Help, Add-ins | Map, Insert, **Layout**, Analysis, View, Edit, **Imagery**, Share, **Parcels**, **Addressing**, Help, Add-ins |
-| Plugin toolbars | All on the Add-ins tab, one group per toolbar | Known plugins get their own tabs with named groups and short captions (Parcels, Addressing) or go on the Edit tab (Align Edge, COGO Workbench); Add-ins holds only the rest |
-| Plugin buttons that are widgets | Left out | Copied, so drop-down buttons such as NENA's **NENA** and **One-way** menus work in the ribbon |
+| Ribbon tabs | Map, Insert, Analysis, View, Edit, Share, Help, Add-ins | Map, Insert, **Layout**, Analysis, View, Edit, **Imagery**, Share, Help, Add-ins |
+| Plugin toolbars | All on the Add-ins tab, one group per toolbar | Generic Add-ins groups; no plugin-specific tabs, imports or configuration |
+| Plugin buttons that are widgets | Left out | Tool buttons and their drop-down menus are mirrored in the ribbon |
 | Plugin toolbars re-shown by their plugin | Could appear above the ribbon | Kept hidden while the ribbon is on |
 | Contextual tabs | None | Feature Layer, Raster Layer and Standalone Table tabs follow the layer selected in Contents |
 | Layouts | New Layout and Layout Manager buttons | New Layout gallery with finished map sheets in ANSI and ISO sizes, My Templates, Import Template, Open Layout list, Export Layout (one or all to PDF) |
 | Workspace | — | Collapsible ribbon (double-click, Ctrl+F1, peek on click), Maximize Map, Map Only, Full Screen |
 | Quick Access row | New, Open, Save, Undo, Redo | Adds Save All (Ctrl+Alt+S: every layer's edits and the project), Toggle Editing and Save Edits, and the collapse button |
-| Edit tab | Tools and Modify groups | Tools (with Align Edge and Advanced Digitizing), a COGO group, a Selection group (Select, Clear), Attributes in Features, as in Pro |
+| Edit tab | Tools and Modify groups | Native Tools, Selection (Select, Clear), Attributes, Create and Modify panes |
 | Selection / Labeling | Basic | Pro captions (Select By Attributes / Location, Switch), label Show/Hide, Rotate and Properties |
 | Share tab | Image, PDF, DXF, Layout | Adds Export Layout and Package Layers |
 | Attributes pane | — | Pro-style Attributes pane for the selection: feature list, vertical fields in the layer's form, multi-edit, Auto Apply |
@@ -298,6 +290,7 @@ Switch it on or off from *Plugins › Keystone › Keystone* or *Project › Key
   broken.
 - The screenshots were taken with [`scripts/capture_screenshots.py`](scripts/capture_screenshots.py),
   run from the QGIS Python console on demo data over OpenStreetMap.
+  Some show the pre-0.5 ribbon; plugin tools now use generic Add-ins groups.
 
 - Not affiliated with or endorsed by Esri. ArcGIS and ArcGIS Pro are trademarks of Esri; they are
   named only to describe what the layout will feel familiar to.

@@ -107,8 +107,8 @@ def set_basemap(iface, name, uri, attribution):
     project = QgsProject.instance()
     old = [lid for lid, layer in project.mapLayers().items()
            if layer.customProperty(MARKER) or layer.customProperty(OLD_MARKER)]
-    project.removeMapLayers(old)
     if uri is None:
+        project.removeMapLayers(old)
         return
     if uri.startswith("styleUrl="):
         layer = _openfreemap_layer(uri, name)
@@ -123,9 +123,12 @@ def set_basemap(iface, name, uri, attribution):
     metadata = layer.metadata()
     metadata.setRights([attribution])
     layer.setMetadata(metadata)
-    project.addMapLayer(layer, False)
+    if project.addMapLayer(layer, False) is None:
+        iface.messageBar().pushWarning("Keystone", tr("Could not add basemap “{}”.").format(name))
+        return
     root = project.layerTreeRoot()
     root.insertLayer(len(root.children()), layer)
+    project.removeMapLayers(old)
 
 
 def gallery_menu(iface, parent):
