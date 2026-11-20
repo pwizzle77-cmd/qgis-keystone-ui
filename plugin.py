@@ -125,8 +125,12 @@ class KeystonePlugin:
             tr("Rebuild Ribbon (after enabling plugins)"),
             self.iface.mainWindow())
         self.rebuild_action.triggered.connect(self.rebuild)
+        self.customize_action = QAction(icon, tr("Customize Ribbon…"), self.iface.mainWindow())
+        self.customize_action.setObjectName("KeystoneCustomizeRibbon")
+        self.customize_action.triggered.connect(self.customize_ribbon)
         self.iface.addPluginToMenu(MENU_NAME, self.action)
         self.iface.addPluginToMenu(MENU_NAME, self.rebuild_action)
+        self.iface.addPluginToMenu(MENU_NAME, self.customize_action)
         if not QgsSettings().value(ENABLED_KEY, True, type=bool):
             return
         # At QGIS start-up wait until all plugins are loaded, so that their
@@ -146,6 +150,15 @@ class KeystonePlugin:
         finally:
             self.iface.removePluginMenu(MENU_NAME, self.action)
             self.iface.removePluginMenu(MENU_NAME, self.rebuild_action)
+            self.iface.removePluginMenu(MENU_NAME, self.customize_action)
+            self.customize_action.deleteLater()
+
+    def customize_ribbon(self):
+        from .custom_ribbon import CustomizeRibbonDialog
+        from .ribbon import RIBBON
+        reserved = [title for title, _ in RIBBON] + [tr("Project"), tr("Add-ins")]
+        if CustomizeRibbonDialog(self.iface.mainWindow(), reserved).exec() and self.ribbon is not None:
+            self.ribbon.refresh_plugin_tabs()
 
     def rebuild(self):
         """Switch off and on: picks up plugins enabled since."""

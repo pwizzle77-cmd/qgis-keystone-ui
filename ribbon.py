@@ -32,6 +32,8 @@ from qgis.PyQt.QtWidgets import (
 
 from .basemaps import gallery_menu
 from .explore import ExploreTool
+from .custom_ribbon import load_tabs, named_toolbars
+from .tool_placements import PlacementWatcher, declared_tools
 from .layer_controls import LayerControls
 from .layouts import (
     export_layouts_menu, import_layout_template, new_layout_menu,
@@ -335,6 +337,7 @@ RIBBON = [
             ("mActionHelpContents menu:mHelpMenu", "L", "help", tr("Help")),
         ]),
         (tr("Customize"), [
+            ("KeystoneCustomizeRibbon", "L", "options", tr("Customize\nRibbon")),
             ("mActionManagePlugins menu:mPluginMenu", "L", "plugins",
              tr("Plugins")),
             ("mActionOptions", "L", "options", tr("Options")),
@@ -572,6 +575,7 @@ def _group(caption, buttons):
     """Ribbon group: large buttons, small ones stacked by three."""
     group = QWidget(objectName="ArcSkinRibbonGroup")
     row = QHBoxLayout()
+    group._button_row = row
     row.setSpacing(2)
     column = None
     for button, large in buttons:
@@ -601,10 +605,13 @@ def _tab(groups):
     scrolls sideways in a window narrower than the groups."""
     page = QWidget()
     row = QHBoxLayout(page)
+    group_widgets = {}
     row.setContentsMargins(2, 2, 2, 2)
     row.setSpacing(0)
     for caption, buttons in groups:
-        row.addWidget(_group(caption, buttons))
+        group = _group(caption, buttons)
+        group_widgets[caption] = group
+        row.addWidget(group)
         line = QFrame(objectName="ArcSkinRibbonSeparator")
         line.setFrameShape(QFrame.Shape.VLine)
         row.addWidget(line)
@@ -613,6 +620,8 @@ def _tab(groups):
                          widgetResizable=True)
     scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
     scroll.setWidget(page)
+    scroll._ribbon_groups = group_widgets
+    scroll._group_row = row
     scroll.setMinimumHeight(page.sizeHint().height()
                             + scroll.horizontalScrollBar().sizeHint().height())
     return scroll
@@ -715,6 +724,10 @@ class Ribbon(QObject):
         self.hidden_docks = []
         self.explore_tool = None
         self.docker = None        # docked_tables.TableDocker, set by plugin
+        self.plugin_pages = []
+        self._plugin_keeper = None
+        self._registered_buttons = []
+        self._registered_groups = []
         self.controls = LayerControls(iface, changes)
         self.commands = self._commands()
 
@@ -1158,30 +1171,129 @@ class Ribbon(QObject):
         if action.isSeparator() or not action.text():
             return None
         if skip_placed and action in self.placed:
+            self.absorbed.add(bar.objectName())
             return None
         button = QToolButton(autoRaise=True)
         button.setDefaultAction(action)
         self.placed.append(action)
         return button
 
-    def addin_groups(self, bars):
-        """One group per remaining plugin toolbar: Pro's Add-ins tab."""
+    def addin_groups(self, bars, custom=False):
+        """Toolbar groups for Add-ins or explicitly assigned custom tabs."""
         groups = []
         for bar in bars:
             name = bar.objectName()
             if name in self.absorbed:
                 continue
-            if name.startswith("m") and name not in ADDIN_HOSTS:
+            if not custom and name.startswith("m") and name not in ADDIN_HOSTS:
                 continue
             buttons = []
             for action in bar.actions():
-                button = self.mirror(bar, action, skip_placed=True)
+                button = self.mirror(bar, action, skip_placed=not custom)
                 if button is not None:
                     buttons.append((_style(button, True), True))
             if buttons:
                 groups.append((bar.windowTitle(), buttons))
                 self.absorbed.add(name)
         return groups
+
+    def _stop_plugin_keeper(self):
+        if self._plugin_keeper is not None:
+            self._plugin_keeper.stop()
+            self._plugin_keeper.deleteLater()
+            self._plugin_keeper = None
+
+    def refresh_declared_tools(self):
+        """Add/remove opted-in actions without rebuilding native pages or editing forms."""
+        if sip.isdeleted(self.tabs):
+            return
+        for group, button in self._registered_buttons:
+            group._button_row.removeWidget(button)
+            button.hide()
+            button.deleteLater()
+        for page, title, group, line in self._registered_groups:
+            page._group_row.removeWidget(group)
+            page._group_row.removeWidget(line)
+            page._ribbon_groups.pop(title, None)
+            group.hide()
+            line.hide()
+            group.deleteLater()
+            line.deleteLater()
+        self._registered_buttons, self._registered_groups = [], []
+        placed = []
+        for action, declaration in declared_tools(self.win):
+            page = self._core_pages.get(tr(declaration.get("tab", "")))
+            title = tr(declaration.get("group", ""))
+            if page is None or not title:
+                continue
+            group = page._ribbon_groups.get(title)
+            if group is None:
+                group = _group(title, [])
+                line = QFrame(objectName="ArcSkinRibbonSeparator")
+                line.setFrameShape(QFrame.Shape.VLine)
+                page._group_row.insertWidget(page._group_row.count() - 1, group)
+                page._group_row.insertWidget(page._group_row.count() - 1, line)
+                page._ribbon_groups[title] = group
+                self._registered_groups.append((page, title, group, line))
+            button = QToolButton(autoRaise=True)
+            button.setDefaultAction(action)
+            menus = [self.win.findChild(QAction, name) for name in declaration.get("menu_actions", [])]
+            menus = [item for item in menus if item is not None]
+            if menus:
+                menu = QMenu(button)
+                menu.addActions(menus)
+                button.setMenu(menu)
+                button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+            group._button_row.addWidget(_style(button, True), 0, Qt.AlignmentFlag.AlignTop)
+            self._registered_buttons.append((group, button))
+            placed.append(action)
+        for page in self._core_pages.values():
+            page.setMinimumHeight(page.widget().sizeHint().height()
+                                  + page.horizontalScrollBar().sizeHint().height())
+        self._core_placed = self._native_core_placed + placed
+        self.refresh_plugin_tabs()
+
+    def refresh_plugin_tabs(self):
+        """Refresh custom/Add-ins pages without disturbing forms, panes or the skin."""
+        current = self.tabs.currentWidget()
+        current_title = self.tabs.tabText(self.tabs.currentIndex())
+        for page in self.plugin_pages:
+            self.tabs.removeTab(self.tabs.indexOf(page))
+            page.deleteLater()
+        self.plugin_pages = []
+        self.placed = list(self._core_placed)
+        self.absorbed = set()
+        bars = named_toolbars(self.win)
+        reserved = [title for title, _ in RIBBON] + [tr("Project"), tr("Add-ins")]
+        for config in load_tabs(reserved=reserved):
+            groups = self.addin_groups([bars[name] for name in config["toolbars"] if name in bars], custom=True)
+            if groups:
+                page = _tab(groups)
+            else:
+                page = QWidget()
+                layout = QVBoxLayout(page)
+                label = QLabel(tr("No toolbar buttons are available for this tab. Enable its plugin, "
+                                  "then reopen Customize Ribbon and press OK."))
+                label.setWordWrap(True)
+                layout.addWidget(label)
+            self.tabs.insertTab(self._core_tab_count + len(self.plugin_pages), page, config["title"])
+            self.plugin_pages.append(page)
+        groups = self.addin_groups(list(bars.values()))
+        if groups:
+            page = _tab(groups)
+            self.tabs.insertTab(self._core_tab_count + len(self.plugin_pages), page, tr("Add-ins"))
+            self.plugin_pages.append(page)
+        self._stop_plugin_keeper()
+        for name in self.absorbed:
+            bars[name].hide()
+        self._plugin_keeper = ToolbarKeeper(self.win, [bars[name] for name in self.absorbed])
+        if self.tabs.indexOf(current) >= 0:
+            self.tabs.setCurrentWidget(current)
+        else:
+            for page in self.plugin_pages:
+                if self.tabs.tabText(self.tabs.indexOf(page)) == current_title:
+                    self.tabs.setCurrentWidget(page)
+                    break
 
     def project_button(self):
         """Blue "Project" tab: project actions plus the hidden QGIS menus."""
@@ -1261,13 +1373,19 @@ class Ribbon(QObject):
         tabs.setTabBar(RibbonTabBar(tabs))
         tabs.setCornerWidget(self.project_button(), Qt.Corner.TopLeftCorner)
 
+        self._core_pages = {}
         for title, groups in RIBBON:
             built = self.groups(groups)
             if built:
-                tabs.addTab(_tab(built), title)
-        addins = self.addin_groups(bars)
-        if addins:
-            tabs.addTab(_tab(addins), tr("Add-ins"))
+                page = _tab(built)
+                tabs.addTab(page, title)
+                self._core_pages[title] = page
+        self._native_core_placed = list(self.placed)
+        self._core_tab_count = tabs.count()
+        self.refresh_declared_tools()
+        self.changes.add(self._stop_plugin_keeper)
+        watcher = PlacementWatcher(win, self.refresh_declared_tools, self)
+        self.changes.add(watcher.stop)
 
         ribbon = QToolBar("Keystone", win,
                           objectName="ArcSkinRibbonBar")
@@ -1287,11 +1405,6 @@ class Ribbon(QObject):
                                   ribbon.deleteLater()))
         if title.locator:
             _drop_down_results(self.changes)
-
-        # Plugin toolbars now in the ribbon stay hidden.
-        keeper = ToolbarKeeper(win, [win.findChild(QToolBar, n) for n in
-                                     self.absorbed | {"mPluginToolBar"}])
-        self.changes.add(keeper.stop)
 
         # Collapsing and peeking.
         tabs.tabBarDoubleClicked.connect(

@@ -3,7 +3,7 @@
 **Every tool where you expect it.** Keystone turns QGIS 3.40+ and QGIS 4 into an organized,
 ribbon-based workspace: the menu bar and dozens of toolbars become labelled tabs, the right tools show
 up when you pick a layer, a print-ready map sheet is one click away, one search box finds addresses,
-streets, parcels and coordinates, and installed plugin toolbars appear in generic **Add-ins** groups.
+streets, parcels and coordinates, and installed plugin toolbars appear in **Add-ins** or your own tabs.
 Keystone is a standalone skin: it does not require or configure any parcel or addressing plugin.
 Switch it off and QGIS is exactly as it was.
 
@@ -26,6 +26,8 @@ If you come from ArcGIS Pro, it will feel familiar.
 ## Contents
 
 - [The ribbon](#the-ribbon)
+- [Customize Ribbon](#customize-ribbon)
+- [Automatic tool placement](#automatic-tool-placement)
 - [Contextual layer tabs](#contextual-layer-tabs)
 - [Attributes pane](#attributes-pane)
 - [Editing: Create and Modify Features](#editing-create-and-modify-features)
@@ -59,6 +61,59 @@ If you come from ArcGIS Pro, it will feel familiar.
 
 Plugin commands keep their original actions, menus and checked/enabled state.
 Keystone does not import another plugin's configuration or calculate its data.
+
+## Customize Ribbon
+
+Open **Plugins > Keystone > Customize Ribbon…**, or **Help > Customize Ribbon** on the ribbon.
+
+1. Click **Add** and name the tab. Double-click an existing name to rename it.
+2. Tick the toolbars to put on that tab. A tab can contain more than one toolbar;
+   each toolbar belongs to one custom tab.
+3. Use **Up / Down** to reorder custom tabs, or **Remove** to remove one.
+4. Click **OK**. Custom tabs refresh immediately, without restarting the skin or closing editing forms.
+
+For example, enable your addressing plugin, add an **Addressing** tab, and tick its
+toolbar. Add a **Parcels** tab and tick your parcel plugin's toolbar. These are user
+choices; Keystone has no plugin-specific tab definitions or configuration imports.
+
+Custom tabs appear after the built-in tabs and before Add-ins and contextual tabs.
+Unassigned plugin toolbars remain on Add-ins. Settings stay in your QGIS profile
+across restarts. If a plugin is unavailable, its saved tab remains with a message;
+enable the plugin and reopen Customize Ribbon, then press OK to refresh it.
+**Reset Custom Tabs** clears the custom layout when you press OK. **Cancel** discards changes.
+
+## Automatic tool placement
+
+Plugins can optionally declare where their existing tools belong. For example,
+Align Edge 1.4.1+ appears in **Edit > Tools** and **Modify Features > Alignment**.
+Entries update when the plugin is enabled or disabled. Actions retain their own
+handlers, icons, checked/enabled state and optional settings commands. Keystone
+remains independent: it reads a generic declaration and does not import the plugin
+or alter its calculations. Custom tabs and editing forms stay open during updates.
+
+For plugin authors, publish a dictionary on `iface.mainWindow()` using the Qt
+property `keystone/tool_placements`, keyed by a unique existing `QAction.objectName()`:
+
+```python
+win = iface.mainWindow()
+placements = win.property("keystone/tool_placements")
+placements = dict(placements) if isinstance(placements, dict) else {}
+placements[action.objectName()] = {
+    "tab": "Edit", "group": "Tools", "modify_group": "Alignment",
+    "description": "How to use this tool.",
+    "menu_actions": [settings_action.objectName()],  # optional
+}
+win.setProperty("keystone/tool_placements", placements)
+```
+
+Actions must be children of the main window (directly or through another QObject).
+Ribbon targets are existing built-in tabs; a missing group is added to that tab.
+`modify_group` selects a Modify pane group. Either location and `menu_actions` may
+be omitted. Remove only your dictionary entry and set the property again on unload,
+then remove/delete your actions. Clear their object names before deferred deletion
+if an immediate reload could create replacement actions with the same names.
+The declaration is session-local, not saved in the project or profile, and needs
+no Keystone import or dependency.
 
 **Edit** — native editing tools, snapping and a Selection group (Select, Clear):
 
@@ -138,6 +193,7 @@ As in Pro, selecting features opens an **Attributes** pane (tabbed with the Cata
 
 *Edit › Features › Modify* opens the **Modify Features** pane: every editing tool in one searchable
 list of native QGIS tools, grouped into General, Alignment, Construct, Divide, Reshape and Attributes.
+Opted-in plugin tools appear in their declared groups as well, such as Align Edge under Alignment.
 Pick a tool to start it; the box below says what it does and how to use it.
 
 ## Explore and Locate
@@ -267,7 +323,9 @@ Changed or added:
 | Settings | `arcskin/…` keys, `ArcSkin` icon theme | Its own `keystone/…` keys and `Keystone` icon theme, so the two plugins don't overwrite each other |
 | Translations | English, Polish | English only (for now) |
 
-The changed code is in `ribbon.py` (rewritten), `layouts.py` and `attributes_pane.py` (new), `panes.py` (docking), `plugin.py`, `__init__.py` and
+The changed code includes `ribbon.py`, `custom_ribbon.py` (profile-local custom tabs),
+`tool_placements.py` (optional tool declarations), `modify_features.py`, `layouts.py`,
+`attributes_pane.py`, `panes.py` (docking), `plugin.py`, `__init__.py` and
 `metadata.txt`; small renames of settings keys and markers in `icon_theme.py`, `stylesheet.py`,
 `panes.py`, `dialogs.py`, `mapview.py`, `basemaps.py` and the theme's `style.qss`.
 
@@ -290,7 +348,8 @@ Switch it on or off from *Plugins › Keystone › Keystone* or *Project › Key
   broken.
 - The screenshots were taken with [`scripts/capture_screenshots.py`](scripts/capture_screenshots.py),
   run from the QGIS Python console on demo data over OpenStreetMap.
-  Some show the pre-0.5 ribbon; plugin tools now use generic Add-ins groups.
+  Some show the pre-0.5 ribbon; plugin tools now use Add-ins, user-defined tabs,
+  or their optional declared placement in built-in groups.
 
 - Not affiliated with or endorsed by Esri. ArcGIS and ArcGIS Pro are trademarks of Esri; they are
   named only to describe what the layout will feel familiar to.

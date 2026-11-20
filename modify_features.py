@@ -15,6 +15,7 @@ from qgis.PyQt.QtWidgets import (
 )
 
 from .util import pro_icon, tr
+from .tool_placements import PlacementWatcher, declared_tools
 
 OBJECT_NAME = "WorkspaceModifyFeatures"
 ACTION_ROLE = Qt.ItemDataRole.UserRole
@@ -146,12 +147,27 @@ class ModifyFeaturesPane(QDockWidget):
         box.addWidget(split, 1)
         self.setWidget(body)
         self.visibilityChanged.connect(lambda shown: shown and self.refresh())
+        self.placement_watcher = PlacementWatcher(self.win, self.refresh, self)
+        self.registered_names = set()
 
     def refresh(self):
         if sip.isdeleted(self):
             return
         self.tree.clear()
-        for group, tools in TOOLS:
+        groups = [(title, list(tools)) for title, tools in TOOLS]
+        by_group = dict(groups)
+        self.registered_names = set()
+        for action, declaration in declared_tools(self.win):
+            title = tr(declaration.get("modify_group", ""))
+            if not title:
+                continue
+            if title not in by_group:
+                by_group[title] = []
+                groups.append((title, by_group[title]))
+            name = action.objectName()
+            self.registered_names.add(name)
+            by_group[title].append((name, None, action.text(), declaration.get("description") or action.toolTip()))
+        for group, tools in groups:
             node = QTreeWidgetItem([group])
             node.setFlags(Qt.ItemFlag.ItemIsEnabled)
             for source, icon, name, text in tools:
@@ -213,7 +229,7 @@ class ModifyFeaturesPane(QDockWidget):
                 "features, for tools that need them).") + "</i>")
             return
         if action.isCheckable() and action.isChecked() \
-                and not source.startswith("mAction"):
+                and not source.startswith("mAction") and source not in self.registered_names:
             return
         action.trigger()
 
@@ -228,6 +244,7 @@ def modify_features_pane(iface, changes):
     pane.hide()
 
     def remove():
+        pane.placement_watcher.stop()
         win.removeDockWidget(pane)
         pane.deleteLater()
 
