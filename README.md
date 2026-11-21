@@ -52,7 +52,7 @@ If you come from ArcGIS Pro, it will feel familiar.
 | **Insert** | Project (New Map, New Layout, Import Layout) · Layer Templates · Map Elements · Styles |
 | **Layout** | Page Layout (New, Open, Import, Manager) · Map View · Export |
 | **Analysis** | Geoprocessing (Tools, ModelBuilder, History, Python) · Vector, Raster, Database, Web and Mesh tools |
-| **View** | Windows (Reset Panes and every pane) · Workspace (Maximize Map, Collapse Ribbon, Map Only, Full Screen) · 3D, Overview, Time |
+| **View** | Windows (Reset Panes and every pane) · Workspace (Maximize Map, Collapse Ribbon, Map Only, Full Screen, Dark Mode) · 3D, Overview, Time |
 | **Edit** | Clipboard · Manage Edits · Snapping · Features · Tools (Advanced Digitizing, Move … Reverse) · Modify · Shapes |
 | **Imagery** | Add raster · Georeference, Raster Calculator, Align Rasters |
 | **Share** | Export layouts and maps (PDF, image, DXF), Package Layers · Print |

@@ -43,13 +43,15 @@ from .util import Changes, tr
 
 PLUGIN_DIR = Path(__file__).resolve().parent
 MENU_NAME = "&Keystone"
-THEME = "pro_light"
+THEMES = ("pro_light", "pro_dark")
 VARIABLE_RE = re.compile(r"^\s*@([\w-]+)\s*:\s*(.+?)\s*;\s*$", re.MULTILINE)
 # Window layout before the ribbon, kept in settings so that switching it
 # off after a QGIS restart still brings the original toolbars back.
 STATE_KEY = "keystone/original_window_state"
 # The user's own on/off choice. Written only on a click.
 ENABLED_KEY = "keystone/enabled"
+# Light or dark colour theme. Written only on a click (Dark Mode, View tab).
+THEME_KEY = "keystone/theme"
 # ArcSkin does the same job; both at once would fight over the window.
 ARCSKIN = "arcskin"
 ARCSKIN_ENABLED_KEY = "arcskin/enabled"
@@ -110,6 +112,8 @@ class KeystonePlugin:
         self.iface = iface
         self.changes = None  # undo log while the ribbon is on
         self.ribbon = None
+        self.style_block = None
+        self.app_palette = None
 
     def initGui(self):  # noqa: N802 (QGIS API name)
         migrate_old_settings()
@@ -181,6 +185,48 @@ class KeystonePlugin:
         elif plugin is not None:
             QgsSettings().setValue(ARCSKIN_ENABLED_KEY, False)
 
+    def _current_theme(self) -> str:
+        theme = QgsSettings().value(THEME_KEY, THEMES[0], type=str)
+        return theme if theme in THEMES else THEMES[0]
+
+    def _apply_theme(self, changes=None) -> None:
+        """(Re)build the style sheet block and app palette for the current theme.
+
+        ``changes`` is given once, while the workspace is being set up, to
+        register the teardown; a later call (Dark Mode toggled) omits it and
+        just swaps the style sheet and palette the already-registered
+        teardown will later remove.
+        """
+        theme = self._current_theme()
+        win = self.iface.mainWindow()
+        if self.style_block is not None:
+            self.style_block.remove()
+        if self.app_palette is not None:
+            self.app_palette.remove()
+        self.style_block = StyleSheetBlock(win, load_qss(theme))
+        # Light text colours for views that read the palette, not the sheet
+        # (layer names in the Layers panel under Windows dark mode).
+        self.app_palette = LightPalette(win, theme_variables(theme))
+        if changes is not None:
+            changes.add(self._teardown_theme)
+
+    def _teardown_theme(self) -> None:
+        if self.style_block is not None:
+            self.style_block.remove()
+            self.style_block = None
+        if self.app_palette is not None:
+            self.app_palette.remove()
+            self.app_palette = None
+
+    def set_theme(self, theme: str) -> None:
+        """Switch the colour theme (Dark Mode toggle). Applies at once if
+        the workspace is on; otherwise takes effect next time it goes on."""
+        if theme not in THEMES:
+            return
+        QgsSettings().setValue(THEME_KEY, theme)
+        if self.changes is not None:
+            self._apply_theme()
+
     def set_enabled(self, enabled: bool) -> None:
         """Apply the workspace or restore the previous QGIS interface."""
         win = self.iface.mainWindow()
@@ -199,12 +245,7 @@ class KeystonePlugin:
                 self.ribbon.docker = docked_tables(self.iface, changes)
 
             steps = [
-                (8, lambda: changes.add(
-                    StyleSheetBlock(win, load_qss(THEME)).remove)),
-                # Light text colours for views that read the palette, not the
-                # sheet (layer names in the Layers panel under Windows dark mode).
-                (1, lambda: changes.add(
-                    LightPalette(win, theme_variables(THEME)).remove)),
+                (9, lambda: self._apply_theme(changes)),
                 (5, lambda: apply_icon_theme(self.iface, changes)),
                 (1, lambda: WindowDresser(self.iface, changes)),
                 (1, lambda: attributes_pane(self.iface, changes)),

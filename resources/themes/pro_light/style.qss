@@ -212,7 +212,7 @@ QPushButton:pressed {
 QPushButton:default {
     background-color: @accent;
     border-color: @accent-dark;
-    color: @bg-panel;
+    color: @accent-text;
 }
 
 QLineEdit,
@@ -368,7 +368,7 @@ QScrollArea#ArcSkinRibbonPage > QWidget > QWidget {
 
 QToolButton#ArcSkinProjectButton {
     background-color: @accent;
-    color: @bg-panel;
+    color: @accent-text;
     border: none;
     padding: 5px 16px;
     margin: 2px 4px 0 0;
@@ -679,11 +679,11 @@ QWidget#ArcSkinMapFooter QToolButton {
 }
 
 QWidget#ArcSkinAttribution {
-    background-color: rgba(255, 255, 255, 170);
+    background-color: @attribution-bg;
 }
 
 QWidget#ArcSkinAttribution QLabel {
-    color: #4c4c4c;
+    color: @attribution-text;
     font-size: 7.5pt;
     padding: 1px 0;
 }
@@ -753,7 +753,7 @@ QgsLayerTreeView::item {
 
 QgsLayerTreeView::item:selected,
 QgsLayerTreeView::item:selected:hover {
-    background-color: #cde6f7;
+    background-color: @layertree-selected;
     border: 1px solid @border-hover;
     color: @text-emphasis;
 }
@@ -762,8 +762,8 @@ QgsLayerTreeView::item:selected:hover {
 
 QTableView#mTableView {
     gridline-color: @border-light;
-    alternate-background-color: #ececec;
-    selection-background-color: #80ffff;
+    alternate-background-color: @bg-header;
+    selection-background-color: @table-selected;
     selection-color: @text-emphasis;
 }
 
@@ -779,22 +779,22 @@ QLabel#ArcSkinToolbarLabel {
 
 /* Progress box while the skin is switched on or off */
 #ArcSkinProgress {
-    background: #ffffff;
-    border: 1px solid #c4c4c4;
+    background: @bg-panel;
+    border: 1px solid @border;
 }
 #ArcSkinProgress QLabel {
     font-family: "Segoe UI";
     font-size: 10pt;
-    color: #2b2b2b;
+    color: @text-emphasis;
 }
 #ArcSkinProgress QProgressBar {
     border: none;
-    background: #e3e3e3;
+    background: @bg-header;
     max-height: 4px;
     min-height: 4px;
 }
 #ArcSkinProgress QProgressBar::chunk {
-    background: #007ac2;
+    background: @accent;
 }
 
 /* Symbology pane / layer properties: page list */
@@ -812,7 +812,7 @@ QListWidget#mOptionsListWidget::item:hover {
     background-color: @bg-header;
 }
 QListWidget#mOptionsListWidget::item:selected {
-    background-color: #dbecf8;
+    background-color: @list-selected;
     border-left: 3px solid @accent;
     color: @text-emphasis;
 }
@@ -837,21 +837,21 @@ QFrame#WorkspaceSketchToolbar QToolButton {
     padding: 2px;
 }
 QFrame#WorkspaceSketchToolbar QToolButton:hover {
-    background: #e5f1fb;
-    border-color: #a8cfeb;
+    background: @sketch-hover;
+    border-color: @sketch-hover-border;
 }
 QFrame#WorkspaceSketchToolbar QToolButton:checked {
-    background: #cce4f7;
-    border-color: #007ac2;
+    background: @sketch-checked;
+    border-color: @accent;
 }
 
 /* Controls on the contextual tabs (transparency, scales, labels). */
 QWidget#WorkspaceRibbonControl QLabel {
-    color: #323232;
+    color: @text-emphasis;
 }
 
 /* Explore pop-up. */
 QDialog#WorkspacePopup QListWidget,
 QDialog#WorkspacePopup QTableWidget {
-    border: 1px solid #d4d4d4;
+    border: 1px solid @border;
 }

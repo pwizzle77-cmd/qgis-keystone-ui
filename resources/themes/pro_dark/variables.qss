@@ -1,0 +1,33 @@
+/* Colours of a dark, ArcGIS Pro-like theme */
+@bg-window: #2b2b2b;
+@bg-panel: #333333;
+@bg-header: #3c3c3c;
+@border: #4a4a4a;
+@border-input: #5c5c5c;
+@border-light: #434343;
+
+@text: #d4d4d4;
+@text-emphasis: #ffffff;
+@text-disabled: #777777;
+
+@accent: #2a9df4;
+@accent-dark: #1c7bc2;
+@accent-text: #ffffff;
+@hover: #2d4f6b;
+@border-hover: #3f87c7;
+@pressed: #1f4863;
+@selected: #2d5e82;
+@selected-hover: #366f99;
+
+@scrollbar-bg: #333333;
+@scrollbar-handle: #5c5c5c;
+@scrollbar-handle-hover: #787878;
+
+@attribution-bg: rgba(30, 30, 30, 170);
+@attribution-text: #d8d8d8;
+@layertree-selected: #2d5e82;
+@table-selected: #0f6e6e;
+@list-selected: #2d5e82;
+@sketch-hover: #2d4f6b;
+@sketch-hover-border: #3f87c7;
+@sketch-checked: #1f4863;

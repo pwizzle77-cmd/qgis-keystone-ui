@@ -211,6 +211,7 @@ RIBBON = [
             ("mActionToggleMapOnly", "S", "overview", tr("Map Only")),
             ("mActionToggleFullScreen", "S", "full_extent",
              tr("Full Screen")),
+            ("fn:dark_mode", "S", "dark_mode", tr("Dark Mode")),
         ]),
         (tr("View"), [
             ("mActionNew3DMapCanvas menu:m3DMapViewsMenu", "L", "map_3d",
@@ -760,7 +761,7 @@ class Ribbon(QObject):
                 tr("Save All: save the edits of every layer and the project "
                    "(Ctrl+Alt+S)"), self.save_all, "save_all"),
             "edit_all": self._command(
-                tr("Edit All: start editing every selected layer"),
+                tr("Edit All: start editing every visible, editable layer"),
                 self.edit_all, "edit"),
             "collapse_ribbon": self._command(
                 tr("Collapse the Ribbon (Ctrl+F1)"), self.set_collapsed,
@@ -828,6 +829,9 @@ class Ribbon(QObject):
             "dock_tables": self._command(
                 tr("Open attribute tables as tabs below the map"),
                 self._dock_tables, "dock_tables", checkable=True),
+            "dark_mode": self._command(
+                tr("Dark Mode: a dark colour theme for the workspace"),
+                self._set_dark_mode, "dark_mode", checkable=True),
         }
         cmds["explore"].setCheckable(True)
         cmds["dock_tables"].blockSignals(True)
@@ -835,6 +839,10 @@ class Ribbon(QObject):
             QgsSettings().value("keystone/dock_tables", True,
                                 type=bool))
         cmds["dock_tables"].blockSignals(False)
+        cmds["dark_mode"].blockSignals(True)
+        cmds["dark_mode"].setChecked(
+            QgsSettings().value("keystone/theme", "pro_light", type=str) == "pro_dark")
+        cmds["dark_mode"].blockSignals(False)
         for key, keys in (("collapse_ribbon", "Ctrl+F1"),
                           ("save_all", "Ctrl+Alt+S")):
             action = cmds[key]
@@ -961,10 +969,12 @@ class Ribbon(QObject):
         self._update_save_all()
 
     def edit_all(self):
-        """Start editing every selected layer that isn't already editable."""
+        """Start editing every visible (checked in Layer Order), editable layer."""
         failed = []
-        for layer in self.iface.layerTreeView().selectedLayers():
+        for layer in self.iface.mapCanvas().layers():
             if not isinstance(layer, QgsVectorLayer) or layer.isEditable():
+                continue
+            if not layer.supportsEditing() or layer.readOnly():
                 continue
             if not layer.startEditing():
                 failed.append(layer.name())
@@ -1020,6 +1030,12 @@ class Ribbon(QObject):
             self.docker.set_on(on)
         else:
             QgsSettings().setValue("keystone/dock_tables", bool(on))
+
+    def _set_dark_mode(self, on):
+        from qgis import utils as qgis_utils
+        plugin = qgis_utils.plugins.get("keystone")
+        if plugin is not None:
+            plugin.set_theme("pro_dark" if on else "pro_light")
 
     def _show_symbology(self):
         dock = self.win.findChild(QDockWidget, "LayerStyling")

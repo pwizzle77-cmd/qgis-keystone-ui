@@ -12,6 +12,7 @@
 
 @accent: #007ac2;
 @accent-dark: #005e95;
+@accent-text: #ffffff;
 @hover: #c8e3f6;
 @border-hover: #77bde7;
 @pressed: #9bccec;
@@ -21,3 +22,12 @@
 @scrollbar-bg: #ebebeb;
 @scrollbar-handle: #bfbfbf;
 @scrollbar-handle-hover: #8a8a8a;
+
+@attribution-bg: rgba(255, 255, 255, 170);
+@attribution-text: #4c4c4c;
+@layertree-selected: #cde6f7;
+@table-selected: #80ffff;
+@list-selected: #dbecf8;
+@sketch-hover: #e5f1fb;
+@sketch-hover-border: #a8cfeb;
+@sketch-checked: #cce4f7;
