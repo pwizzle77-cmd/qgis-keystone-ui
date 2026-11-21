@@ -30,8 +30,8 @@ from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsExpression,
     QgsExpressionContext, QgsExpressionContextUtils,
-    QgsFeatureRequest, QgsGeometry, QgsPointXY, QgsProject, QgsRectangle,
-    QgsVectorLayer,
+    QgsFeatureRequest, QgsGeometry, QgsMessageLog, QgsPointXY, QgsProject,
+    QgsRectangle, QgsVectorLayer,
 )
 from qgis.gui import QgsMapLayerComboBox, QgsVertexMarker
 from qgis.PyQt import sip
@@ -316,7 +316,10 @@ class LocatePane(QDockWidget):
         for unit in ("dms", "mgrs", "utm"):
             try:
                 point = coords.parse_point(text, unit, crs)
-            except Exception:  # noqa: BLE001 - not this format
+            except Exception as err:  # noqa: BLE001 - not this format
+                QgsMessageLog.logMessage(
+                    f"locate: {text!r} did not parse as {unit}: {err!r}",
+                    "Keystone", Qgis.MessageLevel.Info)
                 continue
             return [(text, ("point", point))]
         return []

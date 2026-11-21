@@ -13,7 +13,7 @@ All controls follow the layer selected in Contents.
 """
 
 from qgis.core import (
-    Qgis, QgsMapRendererParallelJob, QgsPalLayerSettings,
+    Qgis, QgsMapRendererParallelJob, QgsMessageLog, QgsPalLayerSettings,
     QgsRasterLayer, QgsTextFormat, QgsVectorLayer,
     QgsVectorLayerSimpleLabeling,
 )
@@ -151,8 +151,10 @@ class SwipeTool(QgsMapTool):
         canvas = self.canvas()
         try:
             canvas.mapCanvasRefreshed.disconnect(self.render)
-        except (TypeError, RuntimeError):
-            pass
+        except (TypeError, RuntimeError) as err:
+            QgsMessageLog.logMessage(
+                f"layer_controls: mapCanvasRefreshed was already disconnected: {err!r}",
+                "Keystone", Qgis.MessageLevel.Info)
         if self.job is not None:
             self.job.cancelWithoutBlocking()
             self.job = None
@@ -182,8 +184,10 @@ class LayerControls:
                              (self.canvas.mapToolSet, self._tool_set)):
             try:
                 signal.disconnect(slot)
-            except (TypeError, RuntimeError):
-                pass
+            except (TypeError, RuntimeError) as err:
+                QgsMessageLog.logMessage(
+                    f"layer_controls.stop: a signal was already disconnected: {err!r}",
+                    "Keystone", Qgis.MessageLevel.Info)
         if self.swipe is not None and self.canvas.mapTool() is self.swipe:
             self.canvas.unsetMapTool(self.swipe)
         self.swipe = None
@@ -357,8 +361,10 @@ class LayerControls:
         if old is not None and not sip.isdeleted(old):
             try:
                 old.styleChanged.disconnect(self._refresh)
-            except (TypeError, RuntimeError):
-                pass
+            except (TypeError, RuntimeError) as err:
+                QgsMessageLog.logMessage(
+                    f"layer_controls._watch: styleChanged was already disconnected: {err!r}",
+                    "Keystone", Qgis.MessageLevel.Info)
         self.layer = layer
         if layer is not None:
             layer.styleChanged.connect(self._refresh)

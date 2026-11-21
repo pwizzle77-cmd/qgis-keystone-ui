@@ -10,6 +10,7 @@ The ribbon uses the designer's own actions. Toolbars come back when the
 designer closes (so QGIS remembers them) and when the workspace is off.
 """
 
+from qgis.core import Qgis, QgsMessageLog
 from qgis.PyQt import sip
 from qgis.PyQt.QtCore import QObject, Qt, QTimer
 from qgis.PyQt.QtGui import QAction
@@ -337,8 +338,10 @@ class LayoutRibbons(QObject):
                               self.closing)):
             try:
                 signal.disconnect(slot)
-            except (TypeError, RuntimeError):
-                pass
+            except (TypeError, RuntimeError) as err:
+                QgsMessageLog.logMessage(
+                    f"layout_ribbon: a layout-designer signal was already disconnected: {err!r}",
+                    "Keystone", Qgis.MessageLevel.Info)
         for ribbon in self.ribbons:
             ribbon.remove()
         self.ribbons = []

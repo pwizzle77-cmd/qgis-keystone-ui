@@ -19,8 +19,8 @@ Attributes table.
 import json
 
 from qgis.core import (
-    QgsCategorizedSymbolRenderer, QgsProject, QgsSymbolLayerUtils,
-    QgsVectorLayer, QgsWkbTypes,
+    Qgis, QgsCategorizedSymbolRenderer, QgsMessageLog, QgsProject,
+    QgsSymbolLayerUtils, QgsVectorLayer, QgsWkbTypes,
 )
 from qgis.PyQt import sip
 from qgis.PyQt.QtCore import QSize, Qt, QTimer
@@ -237,13 +237,17 @@ class CreateFeaturesPane(QDockWidget):
                              (project.cleared, self._schedule)):
             try:
                 signal.disconnect(slot)
-            except (TypeError, RuntimeError):
-                pass
+            except (TypeError, RuntimeError) as err:
+                QgsMessageLog.logMessage(
+                    f"create_features.stop: a project signal was already disconnected: {err!r}",
+                    "Keystone", Qgis.MessageLevel.Info)
         try:
             project.layerTreeRoot().layerOrderChanged.disconnect(
                 self._schedule)
-        except (TypeError, RuntimeError):
-            pass
+        except (TypeError, RuntimeError) as err:
+            QgsMessageLog.logMessage(
+                f"create_features.stop: layerOrderChanged was already disconnected: {err!r}",
+                "Keystone", Qgis.MessageLevel.Info)
         for layer in self.layers:
             if sip.isdeleted(layer):
                 continue
@@ -254,8 +258,10 @@ class CreateFeaturesPane(QDockWidget):
                     continue
                 try:
                     signal.disconnect(slot)
-                except (TypeError, RuntimeError):
-                    pass
+                except (TypeError, RuntimeError) as err:
+                    QgsMessageLog.logMessage(
+                        f"create_features.stop: a layer signal was already disconnected: {err!r}",
+                        "Keystone", Qgis.MessageLevel.Info)
         self.layers = []
         self._slots = {}
 

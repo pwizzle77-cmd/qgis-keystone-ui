@@ -9,9 +9,10 @@ Attributes act on it.
 """
 
 from qgis.core import (
-    QgsApplication, QgsCoordinateTransform, QgsExpression,
+    Qgis, QgsApplication, QgsCoordinateTransform, QgsExpression,
     QgsExpressionContext, QgsExpressionContextUtils, QgsFeatureRequest,
-    QgsGeometry, QgsPointXY, QgsProject, QgsRectangle, QgsVectorLayer,
+    QgsGeometry, QgsMessageLog, QgsPointXY, QgsProject, QgsRectangle,
+    QgsVectorLayer,
 )
 from qgis.gui import QgsHighlight, QgsMapTool, QgsMapToolPan
 from qgis.PyQt import sip
@@ -49,8 +50,10 @@ def _label(layer, feature):
         text = expression.evaluate(context)
         if text not in (None, ""):
             return str(text)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as err:  # noqa: BLE001
+        QgsMessageLog.logMessage(
+            f"explore._label: display expression failed for feature {feature.id()}: {err!r}",
+            "Keystone", Qgis.MessageLevel.Info)
     return str(feature.id())
 
 
@@ -245,7 +248,10 @@ def features_at(canvas, pos, accept=None):
             probe = QgsGeometry(here)
             probe.transform(to_layer)
             tol = max(rect.width(), rect.height()) / 2
-        except Exception:  # noqa: BLE001 - an odd CRS
+        except Exception as err:  # noqa: BLE001 - an odd CRS
+            QgsMessageLog.logMessage(
+                f"explore: skipping {layer.name()}, could not transform the probe area: {err!r}",
+                "Keystone", Qgis.MessageLevel.Info)
             continue
         request = QgsFeatureRequest().setFilterRect(rect)
         hits = []

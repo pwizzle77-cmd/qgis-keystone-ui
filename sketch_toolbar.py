@@ -23,6 +23,7 @@ the right-click that ends a sketch; F2 does the same while the map has the
 keyboard focus, as in Pro.
 """
 
+from qgis.core import Qgis, QgsMessageLog
 from qgis.gui import QgsMapToolCapture
 from qgis.PyQt import sip
 from qgis.PyQt.QtCore import QEvent, QPointF, Qt, QTimer
@@ -247,8 +248,10 @@ class SketchToolbar(QFrame):
     def stop(self):
         try:
             self.canvas.mapToolSet.disconnect(self._tool_set)
-        except (TypeError, RuntimeError):
-            pass
+        except (TypeError, RuntimeError) as err:
+            QgsMessageLog.logMessage(
+                f"sketch_toolbar.stop: mapToolSet was already disconnected: {err!r}",
+                "Keystone", Qgis.MessageLevel.Info)
         if not sip.isdeleted(self.canvas):
             self.canvas.removeEventFilter(self)
             self.canvas.removeAction(self.finish_action)

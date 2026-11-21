@@ -18,7 +18,7 @@ changes go through :class:`~.util.Changes`, which reverts them.
 """
 
 from qgis.core import (
-    QgsProject, QgsRasterLayer, QgsSettings, QgsVectorLayer,
+    Qgis, QgsMessageLog, QgsProject, QgsRasterLayer, QgsSettings, QgsVectorLayer,
 )
 from qgis.gui import QgsFloatingWidget, QgsStatusBar
 from qgis.PyQt import sip
@@ -691,8 +691,10 @@ class TitleRow(QWidget):
         for signal in self._signals:
             try:
                 signal.disconnect(self.show_project)
-            except (TypeError, RuntimeError):
-                pass
+            except (TypeError, RuntimeError) as err:
+                QgsMessageLog.logMessage(
+                    f"ribbon.disconnect_project: a project signal was already disconnected: {err!r}",
+                    "Keystone", Qgis.MessageLevel.Info)
 
     def show_project(self, *_):
         """Project title (or file name) as Pro shows the project's name."""
@@ -860,12 +862,16 @@ class Ribbon(QObject):
                            project.readProject):
                 try:
                     signal.disconnect(self._schedule_save_state)
-                except (TypeError, RuntimeError):
-                    pass
+                except (TypeError, RuntimeError) as err:
+                    QgsMessageLog.logMessage(
+                        f"ribbon.stop: a project signal was already disconnected: {err!r}",
+                        "Keystone", Qgis.MessageLevel.Info)
             try:
                 project.layersAdded.disconnect(self._watch_layers)
-            except (TypeError, RuntimeError):
-                pass
+            except (TypeError, RuntimeError) as err:
+                QgsMessageLog.logMessage(
+                    f"ribbon.stop: layersAdded was already disconnected: {err!r}",
+                    "Keystone", Qgis.MessageLevel.Info)
             for layer in self._watched_layers:
                 self._unwatch_layer(layer)
             self._watched_layers = []
@@ -892,8 +898,10 @@ class Ribbon(QObject):
         for name in self._LAYER_SIGNALS:
             try:
                 getattr(layer, name).disconnect(self._schedule_save_state)
-            except (TypeError, RuntimeError):
-                pass
+            except (TypeError, RuntimeError) as err:
+                QgsMessageLog.logMessage(
+                    f"ribbon._unwatch_layer: {name} was already disconnected: {err!r}",
+                    "Keystone", Qgis.MessageLevel.Info)
 
     def _schedule_save_state(self, *_):
         timer = getattr(self, "_save_timer", None)
@@ -1428,8 +1436,10 @@ class Ribbon(QObject):
     def _disconnect_layer(self):
         try:
             self.iface.currentLayerChanged.disconnect(self.layer_changed)
-        except (TypeError, RuntimeError):
-            pass
+        except (TypeError, RuntimeError) as err:
+            QgsMessageLog.logMessage(
+                f"ribbon._disconnect_layer: currentLayerChanged was already disconnected: {err!r}",
+                "Keystone", Qgis.MessageLevel.Info)
 
 
 def build_ribbon(iface, changes, toggle_action):

@@ -125,8 +125,10 @@ def _mark(target, icons):
     """Record in ``target`` which icon set it holds (if it can be written)."""
     try:
         (target / MARKER).write_text(f"{_version()} {icons}")
-    except OSError:
-        pass
+    except OSError as err:
+        QgsMessageLog.logMessage(
+            f"icon_theme: could not write the marker file in {target}: {err!r}",
+            "Keystone", Qgis.MessageLevel.Info)
 
 
 def _write_qgis_icons(target):

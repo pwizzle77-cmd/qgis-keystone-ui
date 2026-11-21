@@ -16,7 +16,8 @@ from qgis.core import (
     Qgis, QgsApplication, QgsDistanceArea, QgsFillSymbol, QgsLayoutExporter,
     QgsLayoutItemLabel, QgsLayoutItemLegend, QgsLayoutItemMap,
     QgsLayoutItemPicture, QgsLayoutItemScaleBar, QgsLayoutItemShape,
-    QgsLayoutMeasurement, QgsLayoutPoint, QgsPointXY, QgsLayoutSize, QgsPrintLayout, QgsProject,
+    QgsLayoutMeasurement, QgsLayoutPoint, QgsPointXY, QgsLayoutSize,
+    QgsMessageLog, QgsPrintLayout, QgsProject,
     QgsReadWriteContext, QgsTextFormat, QgsUnitTypes,
 )
 from qgis.PyQt.QtCore import Qt
@@ -139,8 +140,10 @@ def _legend(layout, map_item, rect, size_scale):
         style_title = legend.style(Qgis.LegendComponent.Title)
         style_title.setTextFormat(_text_format(11 * size_scale, bold=True))
         legend.setStyle(Qgis.LegendComponent.Title, style_title)
-    except (AttributeError, TypeError):
-        pass
+    except (AttributeError, TypeError) as err:
+        QgsMessageLog.logMessage(
+            f"layouts: could not style the legend title, keeping the default: {err!r}",
+            "Keystone", Qgis.MessageLevel.Info)
     layout.addLayoutItem(legend)
     _place(legend, *rect)
     return legend
@@ -247,8 +250,10 @@ def _template_folders():
     try:
         for path in QgsApplication.layoutTemplatePaths():
             folders.append(Path(path))
-    except AttributeError:
-        pass
+    except AttributeError as err:
+        QgsMessageLog.logMessage(
+            f"layouts: this QGIS has no layoutTemplatePaths(), skipping: {err!r}",
+            "Keystone", Qgis.MessageLevel.Info)
     seen, result = set(), []
     for folder in folders:
         key = str(folder).lower()

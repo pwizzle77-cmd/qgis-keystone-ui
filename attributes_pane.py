@@ -18,8 +18,8 @@ vertically for quick editing.
 """
 
 from qgis.core import (
-    QgsExpression, QgsExpressionContext, QgsExpressionContextUtils,
-    QgsFeatureRequest, QgsProject, QgsSettings, QgsVectorLayer,
+    Qgis, QgsExpression, QgsExpressionContext, QgsExpressionContextUtils,
+    QgsFeatureRequest, QgsMessageLog, QgsProject, QgsSettings, QgsVectorLayer,
 )
 from qgis.gui import QgsAttributeEditorContext, QgsAttributeForm, QgsEditorWidgetWrapper
 from qgis.PyQt import sip
@@ -184,8 +184,10 @@ class AttributesPane(QDockWidget):
             return
         try:
             layer.selectionChanged.disconnect(self._selection_changed)
-        except (TypeError, RuntimeError):
-            pass
+        except (TypeError, RuntimeError) as err:
+            QgsMessageLog.logMessage(
+                f"attributes_pane._disconnect: selectionChanged was already disconnected: {err!r}",
+                "Keystone", Qgis.MessageLevel.Info)
 
     def stop(self):
         """Disconnect everything (the pane is being removed)."""
@@ -197,8 +199,10 @@ class AttributesPane(QDockWidget):
                              (project.layersWillBeRemoved, self._unwatch)):
             try:
                 signal.disconnect(slot)
-            except (TypeError, RuntimeError):
-                pass
+            except (TypeError, RuntimeError) as err:
+                QgsMessageLog.logMessage(
+                    f"attributes_pane.stop: a project signal was already disconnected: {err!r}",
+                    "Keystone", Qgis.MessageLevel.Info)
         for layer in self.layers:
             self._disconnect(layer)
         self.layers = []

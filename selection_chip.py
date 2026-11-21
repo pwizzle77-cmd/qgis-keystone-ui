@@ -16,7 +16,7 @@ when another tool is picked. Clicks with Shift or Ctrl (add to / remove
 from the selection) are left to QGIS and get no chip.
 """
 
-from qgis.core import QgsMapLayer, QgsVectorLayer
+from qgis.core import Qgis, QgsMapLayer, QgsMessageLog, QgsVectorLayer
 from qgis.gui import QgsHighlight
 from qgis.PyQt import sip
 from qgis.PyQt.QtCore import QEvent, QObject, QPoint, Qt, QTimer
@@ -202,8 +202,10 @@ class SelectionChip(QObject):
         try:
             self.canvas.mapToolSet.disconnect(self.hide)
             self.canvas.extentsChanged.disconnect(self.hide)
-        except (TypeError, RuntimeError):
-            pass
+        except (TypeError, RuntimeError) as err:
+            QgsMessageLog.logMessage(
+                f"selection_chip.stop: a canvas signal was already disconnected: {err!r}",
+                "Keystone", Qgis.MessageLevel.Info)
         if not sip.isdeleted(self.canvas):
             self.canvas.viewport().removeEventFilter(self)
         self.hide()
