@@ -31,3 +31,7 @@
 @sketch-hover: #2d4f6b;
 @sketch-hover-border: #3f87c7;
 @sketch-checked: #1f4863;
+
+@check-icon: check_dark.svg;
+@check-partial-icon: check_partial_dark.svg;
+@radio-icon: radio_dot_dark.svg;

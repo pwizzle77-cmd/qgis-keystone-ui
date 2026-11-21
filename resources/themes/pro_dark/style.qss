@@ -472,13 +472,13 @@ QGroupBox::indicator:checked,
 QTreeView::indicator:checked,
 QListView::indicator:checked,
 QTableView::indicator:checked {
-    image: url(@icons/check.svg);
+    image: url(@icons/@check-icon);
 }
 
 QCheckBox::indicator:indeterminate,
 QTreeView::indicator:indeterminate,
 QListView::indicator:indeterminate {
-    image: url(@icons/check_partial.svg);
+    image: url(@icons/@check-partial-icon);
 }
 
 QCheckBox::indicator:disabled,
@@ -500,7 +500,7 @@ QRadioButton::indicator:hover {
 }
 
 QRadioButton::indicator:checked {
-    image: url(@icons/radio_dot.svg);
+    image: url(@icons/@radio-icon);
 }
 
 /* --- Drop-down lists -------------------------------------------------- */
