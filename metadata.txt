@@ -4,13 +4,14 @@ qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=Every tool where you expect it: turns QGIS into an organized, ribbon-based workspace with labelled tabs, contextual layer tabs, one-click map sheets, a Locate search box, an Attributes pane and room to work. Switch it off and QGIS is exactly as it was.
 about=Keystone is a standalone skin and ribbon workspace for QGIS. Native tools are organized into Map, Insert, Layout, Analysis, View, Edit, Imagery, Share and Help tabs, with contextual layer tabs, layout galleries, Locate, Attributes, Create and Modify panes. Customize Ribbon creates your own named tabs from installed plugin or QGIS toolbars; unassigned plugin tools stay on Add-ins. No parcel or addressing plugin is required or configured by Keystone. Collapse the ribbon with Ctrl+F1 or use Maximize Map for more room. Switching it off restores the previous QGIS interface. Based on ArcSkin by EnviroSolutions (GPL-2.0-or-later); use only one skin at a time. Independent of Esri.
-version=0.7.1
+version=0.7.2
 author=Charles
 email=pwizzle77@gmail.com
 homepage=https://github.com/pwizzle77-cmd/qgis-keystone-ui
 repository=https://github.com/pwizzle77-cmd/qgis-keystone-ui
 tracker=https://github.com/pwizzle77-cmd/qgis-keystone-ui/issues
 changelog=
+    0.7.2 - Edit is now also a dropdown: Edit All starts editing every layer selected in Contents, alongside the existing toggle-editing action.
     0.7.1 - Code clean-up for the plugin repository's security scan: silently-ignored exceptions are now logged (same fallback behaviour); no change in how the plugin works.
     0.7.0 - Generic optional tool placement: plugins declare existing actions for built-in ribbon groups and Modify Features; entries update automatically on registration/unload without restarting the skin or importing other plugins
     0.6.0 - Customize Ribbon: create, rename and reorder profile-local tabs, assign named toolbars without plugin-specific imports, remember missing plugins, and refresh custom/Add-ins pages without restarting the skin

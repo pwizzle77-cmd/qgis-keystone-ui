@@ -227,7 +227,7 @@ RIBBON = [
             ("mActionCopyFeatures", "S", "copy", tr("Copy")),
         ]),
         (tr("Manage Edits"), [
-            ("mActionToggleEditing", "L", "edit", tr("Edit")),
+            ("mActionToggleEditing fn:edit_all", "L", "edit", tr("Edit")),
             ("mActionSaveLayerEdits menu:AllEditsMenu", "L", "save_edits",
              tr("Save")),
             ("fn:save_all", "L", "save_all", tr("Save\nAll")),
@@ -759,6 +759,9 @@ class Ribbon(QObject):
             "save_all": self._command(
                 tr("Save All: save the edits of every layer and the project "
                    "(Ctrl+Alt+S)"), self.save_all, "save_all"),
+            "edit_all": self._command(
+                tr("Edit All: start editing every selected layer"),
+                self.edit_all, "edit"),
             "collapse_ribbon": self._command(
                 tr("Collapse the Ribbon (Ctrl+F1)"), self.set_collapsed,
                 "collapse_all", checkable=True),
@@ -956,6 +959,19 @@ class Ribbon(QObject):
                 len(saved)) if saved else tr("Saved the project."))
             bar.pushSuccess(tr("Save All"), what)
         self._update_save_all()
+
+    def edit_all(self):
+        """Start editing every selected layer that isn't already editable."""
+        failed = []
+        for layer in self.iface.layerTreeView().selectedLayers():
+            if not isinstance(layer, QgsVectorLayer) or layer.isEditable():
+                continue
+            if not layer.startEditing():
+                failed.append(layer.name())
+        if failed:
+            self.iface.messageBar().pushWarning(
+                tr("Edit All"),
+                tr("Could not start editing: {}").format(", ".join(failed)))
 
     def _trigger(self, name):
         action = find_action(self.win, name)
