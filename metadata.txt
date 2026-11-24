@@ -34,6 +34,6 @@ changelog=
 tags=theme,ui,interface,ribbon,icons,layout,cartography,editing,workspace,keystone
 category=Plugins
 icon=resources/icons/icon.svg
-experimental=True
+experimental=False
 deprecated=False
 server=False
