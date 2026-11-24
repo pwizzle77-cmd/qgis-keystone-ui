@@ -246,8 +246,33 @@ def _menu_key(text):
     return text.replace("&", "").replace("...", "…").strip().lower()
 
 
+# Editing tools the layer menu does not have. Each calls that QGIS action
+# and starts an edit session when the layer is not already editable.
+# Split and reshape need a line or a polygon edge.
+VECTOR_MENU = (
+    ("mActionVertexToolActiveLayer", "vertex_tool", tr("Edit Vertices")),
+    ("mActionMoveFeature", "move", tr("Move")),
+    ("mActionSplitFeatures", "split", tr("Split")),
+    ("mActionReshapeFeatures", "reshape", tr("Reshape")),
+)
+EDGE_TOOLS = {"mActionSplitFeatures", "mActionReshapeFeatures"}
+
+
+def _has_geometry(layer):
+    kind = layer.geometryType()
+    return kind in (Qgis.GeometryType.Point, Qgis.GeometryType.Line,
+                    Qgis.GeometryType.Polygon)
+
+
+def _tool_fits(layer, name):
+    if name not in EDGE_TOOLS:
+        return True
+    return layer.geometryType() in (
+        Qgis.GeometryType.Line, Qgis.GeometryType.Polygon)
+
+
 class LayerMenuIcons(QObject):
-    """Adds Pro icons to the Contents context menu each time it opens."""
+    """Pro icons, plus edit shortcuts, on the Contents context menu."""
 
     def __init__(self, view, changes):
         super().__init__(view)
@@ -280,6 +305,49 @@ class LayerMenuIcons(QObject):
             if action.objectName() and id(action) not in self.saved:
                 self.saved[id(action)] = (action, action.icon())
             action.setIcon(pro_icon(icon))
+        self._add_edit_shortcuts(menu)
+
+    def _add_edit_shortcuts(self, menu):
+        """Edit Vertices and the other geometry tools, at the top."""
+        layer = self.view.currentLayer()
+        if not isinstance(layer, QgsVectorLayer) or not _has_geometry(layer):
+            return
+        win = self.view.window()
+        if win is None:
+            return
+        specs = [row for row in VECTOR_MENU
+                 if _tool_fits(layer, row[0])
+                 and win.findChild(QAction, row[0]) is not None]
+        if not specs:
+            return
+        first = menu.actions()[0] if menu.actions() else None
+        usable = layer.isValid() and layer.supportsEditing()
+        for name, icon, label in specs:
+            action = QAction(pro_icon(icon), label, menu)
+            action.setEnabled(usable)
+            action.triggered.connect(
+                lambda _on=False, n=name, lay=layer: self._run_edit(n, lay))
+            menu.insertAction(first, action)
+        menu.insertSeparator(first)
+
+    def _run_edit(self, name, layer):
+        if sip.isdeleted(layer):
+            return
+        try:
+            from qgis.utils import iface
+        except ImportError:
+            iface = None
+        if iface is not None:
+            iface.setActiveLayer(layer)
+        if not layer.isEditable():
+            if not layer.startEditing():
+                return
+        source = self.view.window().findChild(QAction, name)
+        if source is None or not source.isEnabled():
+            return
+        if source.isCheckable() and source.isChecked():
+            return   # already the active tool; triggering would switch it off
+        source.trigger()
 
     def stop(self):
         self.view.contextMenuAboutToShow.disconnect(self.dress)

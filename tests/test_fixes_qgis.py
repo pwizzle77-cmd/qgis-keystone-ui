@@ -14,11 +14,13 @@ spec = importlib.util.spec_from_file_location('keystone_under_test', plugin_root
 package = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = package
 spec.loader.exec_module(package)
-from qgis.core import QgsApplication, QgsFeature, QgsFieldConstraints, QgsGeometry, QgsPointXY, QgsPrintLayout
-from qgis.core import QgsProject, QgsVectorLayer
+from qgis.core import QgsApplication, QgsCoordinateReferenceSystem, QgsFeature, QgsFieldConstraints, QgsGeometry, QgsPointXY, QgsPrintLayout
+from qgis.core import QgsProject, QgsRectangle, QgsVectorLayer
 from qgis.gui import QgsGui, QgsMapCanvas, QgsMessageBar
 from qgis.PyQt.QtGui import QAction
-from qgis.PyQt.QtWidgets import QLineEdit, QMainWindow, QToolBar, QWidget
+from qgis.PyQt.QtWidgets import (
+    QLineEdit, QMainWindow, QMenu, QToolBar, QWidget,
+)
 from qgis.PyQt.QtTest import QTest
 from keystone_under_test import attributes_pane as A, basemaps as B, layouts as L, locate, modify_features, ribbon
 from keystone_under_test.util import Changes
@@ -279,6 +281,245 @@ class KeystoneFixesTests(unittest.TestCase):
         first = self.layer('First address layer', 'fulladdr')
         second = self.layer('Second address layer', 'fulladdr')
         self.assertEqual({layer.id() for layer, _ in locate._address_layers()}, {first.id(), second.id()})
+
+    def test_selection_chip_lists_layer_names(self):
+        from keystone_under_test import selection_chip as chip
+        roads = self.layer('Roads')
+        parcels = self.layer('Parcels', 'pin')
+        parcels.setDisplayExpression('"pin"')
+        road_hits = [(roads, feature) for feature in roads.getFeatures()]
+        parcel = next(parcels.getFeatures())
+        labels = chip.menu_labels(road_hits + [(parcels, parcel)])
+        self.assertEqual(len(labels), 3)
+        self.assertTrue(labels[0].startswith('Roads'))
+        self.assertTrue(labels[1].startswith('Roads'))
+        self.assertNotEqual(labels[0], labels[1])
+        self.assertNotIn(roads.id(), labels[0])
+        self.assertTrue(labels[2].startswith('Parcels'))
+        self.assertNotEqual(labels[2], str(parcel.id()))
+
+    def test_attribute_table_dock_setting_turns_on_and_restores(self):
+        from qgis.core import QgsSettings
+        from keystone_under_test import docked_tables as tables
+        settings = QgsSettings()
+        before = {key: (settings.contains(key), settings.value(key))
+                  for key in (tables.LEGACY_KEY, tables.DOCK_KEY)}
+        docker = tables.TableDocker(self.iface)
+        try:
+            for key in (tables.LEGACY_KEY, tables.DOCK_KEY):
+                self.assertEqual(settings.value(key, False, type=bool), True)
+        finally:
+            docker.stop()
+        for key, (present, value) in before.items():
+            self.assertEqual(settings.contains(key), present)
+            if present:
+                self.assertEqual(settings.value(key), value)
+
+    def test_vector_layer_menu_starts_editing_and_the_vertex_tool(self):
+        from qgis.core import QgsLayerTreeModel
+        from qgis.gui import QgsLayerTreeView
+        from keystone_under_test.contents_views import LayerMenuIcons
+        layer = QgsVectorLayer(
+            'Polygon?crs=EPSG:3857&field=name:string', 'Lots', 'memory')
+        self.project.addMapLayer(layer)
+        for name in (
+                'mActionVertexToolActiveLayer', 'mActionMoveFeature',
+                'mActionSplitFeatures', 'mActionReshapeFeatures'):
+            action = QAction(self.win)
+            action.setObjectName(name)
+            action.setCheckable(True)
+        view = QgsLayerTreeView(self.win)
+        view.setModel(QgsLayerTreeModel(self.project.layerTreeRoot(), view))
+        view.setCurrentLayer(layer)
+        menu = QMenu()
+        menu.addAction('Zoom')
+        icons = LayerMenuIcons(view, Changes())
+        try:
+            icons.dress(menu)
+            texts = [a.text() for a in menu.actions() if not a.isSeparator()]
+            self.assertEqual(texts[0], 'Edit Vertices')
+            self.assertIn('Move', texts)
+            self.assertIn('Split', texts)
+            self.assertIn('Reshape', texts)
+            vertex = self.win.findChild(
+                QAction, 'mActionVertexToolActiveLayer')
+            hit = Mock()
+            vertex.triggered.connect(hit)
+            menu.actions()[0].trigger()
+            self.assertTrue(layer.isEditable())
+            hit.assert_called_once()
+            point = self.layer('Points')
+            view.setCurrentLayer(point)
+            point_menu = QMenu()
+            point_menu.addAction('Zoom')
+            icons.dress(point_menu)
+            point_texts = [a.text() for a in point_menu.actions()
+                           if not a.isSeparator()]
+            self.assertIn('Edit Vertices', point_texts)
+            self.assertNotIn('Split', point_texts)
+            self.assertNotIn('Reshape', point_texts)
+        finally:
+            icons.stop()
+            view.deleteLater()
+
+    def _menu_iface(self, layer):
+        self.iface.activeLayer.return_value = layer
+        vertex = QAction('Vertices', self.win)
+        vertex.setObjectName('mActionVertexTool')
+        reshape = QAction('Reshape', self.win)
+        reshape.setObjectName('mActionReshapeFeatures')
+        toggle = QAction('Toggle', self.win)
+        toggle.setObjectName('mActionToggleEditing')
+        self.iface.actionVertexTool.return_value = vertex
+        self.iface.actionReshapeFeatures.return_value = reshape
+        self.iface.actionToggleEditing.return_value = toggle
+        self.iface.openFeatureForm = Mock()
+        return vertex, reshape, toggle
+
+    def _polygon(self):
+        layer = QgsVectorLayer(
+            'Polygon?crs=EPSG:3857&field=name:string', 'Lots', 'memory')
+        feature = QgsFeature(layer.fields())
+        feature['name'] = 'A'
+        feature.setGeometry(QgsGeometry.fromWkt(
+            'POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))'))
+        layer.dataProvider().addFeatures([feature])
+        feature = QgsFeature(layer.fields())
+        feature['name'] = 'B'
+        feature.setGeometry(QgsGeometry.fromWkt(
+            'POLYGON((30 30, 40 30, 40 40, 30 40, 30 30))'))
+        layer.dataProvider().addFeatures([feature])
+        self.project.addMapLayer(layer)
+        self.canvas.setDestinationCrs(QgsCoordinateReferenceSystem('EPSG:3857'))
+        self.canvas.setExtent(QgsRectangle(-10, -10, 80, 80))
+        self.canvas.setLayers([layer])
+        return layer
+
+    def test_parse_wkt_ewkt_and_wkb(self):
+        from keystone_under_test import canvas_menu as menu
+        geom, srid = menu.parse_geometry('POINT(1 2)')
+        self.assertEqual(srid, None)
+        self.assertAlmostEqual(geom.asPoint().x(), 1)
+        self.assertAlmostEqual(geom.asPoint().y(), 2)
+        geom, srid = menu.parse_geometry('SRID=4326;POINT(1 2)')
+        self.assertEqual(srid, 4326)
+        self.assertFalse(geom.isEmpty())
+        raw = bytes(geom.asWkb())
+        parsed, _srid = menu.parse_geometry(raw.hex())
+        self.assertFalse(parsed.isEmpty())
+        parsed, _srid = menu.parse_geometry('0x' + raw.hex())
+        self.assertFalse(parsed.isEmpty())
+        parsed, _srid = menu.parse_geometry('\\x' + raw.hex())
+        self.assertFalse(parsed.isEmpty())
+        import base64
+        parsed, _srid = menu.parse_geometry(base64.b64encode(raw).decode())
+        self.assertFalse(parsed.isEmpty())
+        parsed, parsed_srid = menu.parse_geometry(raw)
+        self.assertFalse(parsed.isEmpty())
+        self.assertIsNone(parsed_srid)
+        self.assertEqual(menu.parse_geometry('not a geometry'), (None, None))
+        self.assertEqual(menu.parse_geometry(''), (None, None))
+
+    def test_hit_prefers_the_selected_feature(self):
+        from keystone_under_test import canvas_menu as menu
+        layer = self._polygon()
+        ids = [feature.id() for feature in layer.getFeatures()]
+        near, far = [layer.getFeature(fid) for fid in ids]
+        self.assertEqual(menu.choose_feature(layer, [near, far]).id(), near.id())
+        layer.selectByIds([far.id()])
+        self.assertEqual(menu.choose_feature(layer, [near, far]).id(), far.id())
+        hits = menu.features_on_layer(
+            self.canvas, layer, QgsPointXY(1, 1), radius=5)
+        self.assertEqual([feature.id() for feature in hits], [near.id()])
+        table = QgsVectorLayer('None?field=name:string', 'Table', 'memory')
+        self.assertFalse(menu.has_geometry(table))
+
+    def test_canvas_menu_edits_copies_and_pastes(self):
+        from keystone_under_test import canvas_menu as menu
+        from keystone_under_test.util import Changes
+        layer = self._polygon()
+        vertex, reshape, toggle = self._menu_iface(layer)
+        hook = menu.CanvasMenu(self.iface)
+        changes = Changes()
+        changes.add(hook.stop)
+        try:
+            popup = QMenu()
+            popup.addAction('Copy Coordinate')
+            hook.dress(popup, SimpleNamespace(mapPoint=lambda: QgsPointXY(1, 1)))
+            texts = [action.text() for action in popup.actions()
+                     if not action.isSeparator()]
+            self.assertEqual(texts[0], 'Start Editing')
+            self.assertIn('Edit Attributes', texts)
+            self.assertIn('Edit Vertices', texts)
+            self.assertIn('Reshape Features', texts)
+            self.assertIn('Copy to Scratch Layer', texts)
+            self.assertIn('Paste Geometry', texts)
+            self.assertEqual(texts[-1], 'Copy Coordinate')
+            reshape_item = next(
+                action for action in popup.actions()
+                if action.text() == 'Reshape Features')
+            self.assertTrue(reshape_item.isEnabled())
+            edit_item = next(
+                action for action in popup.actions()
+                if action.text() == 'Edit Attributes')
+            edit_item.trigger()
+            self.iface.openFeatureForm.assert_called_once()
+            vertex_item = next(
+                action for action in popup.actions()
+                if action.text() == 'Edit Vertices')
+            vertex_hit = Mock()
+            vertex.triggered.connect(vertex_hit)
+            vertex_item.trigger()
+            self.assertTrue(layer.isEditable())
+            self.assertEqual(layer.selectedFeatureCount(), 1)
+            vertex_hit.assert_called_once()
+            toggle_hit = Mock()
+            toggle.triggered.connect(toggle_hit)
+            popup.actions()[0].trigger()
+            toggle_hit.assert_called_once()
+
+            point = self.layer('Points')
+            self.iface.activeLayer.return_value = point
+            point_menu = QMenu()
+            hook.dress(point_menu, SimpleNamespace(mapPoint=lambda: QgsPointXY(0, 0)))
+            point_reshape = next(
+                action for action in point_menu.actions()
+                if action.text() == 'Reshape Features')
+            self.assertFalse(point_reshape.isEnabled())
+            self.assertIn('points', point_reshape.toolTip())
+
+            table = QgsVectorLayer('None?field=name:string', 'Table', 'memory')
+            self.project.addMapLayer(table)
+            self.iface.activeLayer.return_value = table
+            table_menu = QMenu()
+            hook.dress(table_menu, SimpleNamespace(mapPoint=lambda: QgsPointXY(0, 0)))
+            table_texts = [action.text() for action in table_menu.actions()
+                           if not action.isSeparator()]
+            self.assertEqual(table_texts, ['Paste Geometry'])
+
+            self.iface.activeLayer.return_value = layer
+            copied = menu.copy_to_scratch(
+                self.project, layer, list(layer.getFeatures()))
+            self.assertEqual(copied.featureCount(), 2)
+            self.assertEqual(copied.fields().names(), ['name'])
+            self.assertEqual(copied.providerType(), 'memory')
+            pasted, fid = menu.paste_geometry(
+                self.project, self.canvas, 'SRID=3857;POINT(4 4)', layer)
+            self.assertIsNotNone(fid)
+            self.assertEqual(pasted.geometryType(), point.geometryType())
+            self.assertIn(pasted, self.project.mapLayers().values())
+            again, _fid = menu.paste_geometry(
+                self.project, self.canvas, 'POINT(6 6)', pasted)
+            self.assertEqual(again.id(), pasted.id())
+            self.assertEqual(pasted.featureCount(), 2)
+            self.assertIsNone(menu.paste_geometry(
+                self.project, self.canvas, 'nope', layer)[0])
+            reshape_hit = Mock()
+            reshape.triggered.connect(reshape_hit)
+            reshape_item.trigger()
+            reshape_hit.assert_called_once()
+        finally:
+            changes.undo()
 
 
 if __name__ == '__main__':

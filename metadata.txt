@@ -4,13 +4,15 @@ qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=Every tool where you expect it: turns QGIS into an organized, ribbon-based workspace with labelled tabs, contextual layer tabs, one-click map sheets, a Locate search box, an Attributes pane and room to work. Switch it off and QGIS is exactly as it was.
 about=Keystone is a standalone skin and ribbon workspace for QGIS. Native tools are organized into Map, Insert, Layout, Analysis, View, Edit, Imagery, Share and Help tabs, with contextual layer tabs, layout galleries, Locate, Attributes, Create and Modify panes. Customize Ribbon creates your own named tabs from installed plugin or QGIS toolbars; unassigned plugin tools stay on Add-ins. No parcel or addressing plugin is required or configured by Keystone. Collapse the ribbon with Ctrl+F1 or use Maximize Map for more room. Switching it off restores the previous QGIS interface. Based on ArcSkin by EnviroSolutions (GPL-2.0-or-later); use only one skin at a time. Independent of Esri.
-version=0.8.1
+version=0.8.3
 author=Charles
 email=pwizzle77@gmail.com
 homepage=https://github.com/pwizzle77-cmd/qgis-keystone-ui
 repository=https://github.com/pwizzle77-cmd/qgis-keystone-ui
 tracker=https://github.com/pwizzle77-cmd/qgis-keystone-ui/issues
 changelog=
+    0.8.3 - Right-click the map to start editing, edit attributes or vertices, reshape a line or polygon, copy features to a scratch layer, or paste WKT or WKB. Pan, zoom and digitizing keep their own right-click.
+    0.8.2 - The selection chip lists overlapping features by layer name. Attribute tables open docked at the bottom on QGIS 4. Right-click a vector layer for Edit Vertices, Move, Split and Reshape.
     0.8.1 - Checkbox, tri-state and radio button marks are now visible in Dark Mode (they were a near-black mark on a near-black box, same colour as the light theme's own text).
     0.8.0 - Dark Mode: a dark ArcGIS Pro-like colour theme, toggled from View, Workspace, applied at once and remembered. Fixed Edit All to start editing every visible, editable layer (checked in Layer Order), not the layers selected/highlighted in Contents.
     0.7.2 - Edit is now also a dropdown: Edit All starts editing every layer selected in Contents, alongside the existing toggle-editing action.

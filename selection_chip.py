@@ -7,7 +7,8 @@ features of one layer) overlap:
   alone only looks at the active layer). If QGIS already selected one of
   the features under the click on the active layer, that one is kept;
 * shows a small chip next to the cursor with the number of features found
-  there. Click the chip for a list grouped by layer; hovering an entry
+  there. Click the chip for a list; each entry shows the layer name (and
+  the feature's display name when it has one). Hovering an entry
   highlights the feature on the map, clicking it selects that feature
   instead (and makes its layer the active layer).
 
@@ -28,6 +29,33 @@ from .util import pro_icon, tr
 
 SELECT_ACTION = "mActionSelectFeatures"
 CHIP_OFFSET = QPoint(14, 14)   # from the click, like Pro's chip
+
+
+def menu_labels(hits):
+    """Text for each (layer, feature). The layer name is the choice.
+
+    A display name is added when the layer has one. Two features that
+    would read the same get the feature id in parentheses. Menu section
+    titles are not used: the skin draws every separator as a 1px line, so
+    a section's layer name would not show.
+    """
+    labels = []
+    for layer, feature in hits:
+        label = _label(layer, feature)
+        name = layer.name() or tr("(unnamed layer)")
+        if not label or label == str(feature.id()):
+            labels.append(name)
+        else:
+            labels.append(f"{name}: {label}")
+    counts = {}
+    for text in labels:
+        counts[text] = counts.get(text, 0) + 1
+    out = []
+    for (_layer, feature), text in zip(hits, labels):
+        if counts[text] > 1:
+            text = f"{text} ({feature.id()})"
+        out.append(text)
+    return out
 
 
 def _selectable(layer):
@@ -124,13 +152,8 @@ class SelectionChip(QObject):
     # -------------------------------------------------------------- chip
     def _show_chip(self, pos):
         self.menu.clear()
-        current = None
-        for layer, feature in self.hits:
-            if layer is not current:
-                current = layer
-                count = sum(1 for lay, _f in self.hits if lay is layer)
-                self.menu.addSection(f"{layer.name()} ({count})")
-            action = self.menu.addAction(_label(layer, feature))
+        for (layer, feature), text in zip(self.hits, menu_labels(self.hits)):
+            action = self.menu.addAction(text)
             action.setData((layer.id(), feature.id()))
             action.setCheckable(True)
             action.setChecked(feature.id() in layer.selectedFeatureIds())

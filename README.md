@@ -187,9 +187,15 @@ As in Pro, selecting features opens an **Attributes** pane (tabbed with the Cata
   Digitizing, Vertex Editor, Delete vertex, Undo, Finish (F2) and Cancel.
 - **Selection chip**: click with the Select tool and the top-most feature is selected, on any
   selectable layer (not just the active one). Where several features overlap, a small chip with the
-  number of features appears next to the cursor; click it for a list grouped by layer, hover an entry
-  to highlight it on the map and click to select that feature instead. Shift/Ctrl clicks are left to
-  QGIS.
+  number of features appears next to the cursor; click it for a list where each entry shows the
+  layer name (and the feature's display name when it has one). Hover an entry to highlight it on the
+  map and click to select that feature instead. Shift/Ctrl clicks are left to QGIS. Right-click a
+  vector layer in Contents for Edit Vertices, Move, Split and Reshape.
+- **Map right-click** (while Pan, Zoom or Select is the tool): Start or Stop Editing, Edit
+  Attributes, Edit Vertices, and Reshape for a line or polygon. Points say why Reshape does not
+  apply. Copy sends the selected features, or the feature under the cursor, to a new scratch
+  layer. Paste reads WKT, EWKT (`SRID=4326;POINT…`) or hex WKB from the clipboard into a scratch
+  layer and zooms to it. A digitizing tool keeps its own right-click.
 
 *Edit › Features › Modify* opens the **Modify Features** pane: every editing tool in one searchable
 list of native QGIS tools, grouped into General, Alignment, Construct, Divide, Reshape and Attributes.
