@@ -315,7 +315,7 @@ class LocatePane(QDockWidget):
             return []
         for unit in ("dms", "mgrs", "utm"):
             try:
-                point = coords.parse_point(text, unit, crs)
+                point = coords.parse_point(text, unit, crs, lat_first=True)
             except Exception as err:  # noqa: BLE001 - not this format
                 QgsMessageLog.logMessage(
                     f"locate: {text!r} did not parse as {unit}: {err!r}",

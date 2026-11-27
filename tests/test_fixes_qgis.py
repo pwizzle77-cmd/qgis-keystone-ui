@@ -22,7 +22,7 @@ from qgis.PyQt.QtWidgets import (
     QLineEdit, QMainWindow, QMenu, QToolBar, QWidget,
 )
 from qgis.PyQt.QtTest import QTest
-from keystone_under_test import attributes_pane as A, basemaps as B, layouts as L, locate, modify_features, ribbon
+from keystone_under_test import attributes_pane as A, basemaps as B, coords, layouts as L, locate, modify_features, ribbon
 from keystone_under_test.util import Changes
 
 
@@ -419,6 +419,23 @@ class KeystoneFixesTests(unittest.TestCase):
         self.assertIsNone(parsed_srid)
         self.assertEqual(menu.parse_geometry('not a geometry'), (None, None))
         self.assertEqual(menu.parse_geometry(''), (None, None))
+
+    def test_dms_without_hemisphere_letters_reads_latitude_first_only_for_locate(self):
+        crs = QgsCoordinateReferenceSystem("EPSG:4326")
+        # New York, DMS, no N/S/E/W letters: Locate must read it latitude
+        # first (as Google Maps does); the status bar's own coordinate box
+        # keeps reading the same text longitude first, matching what it shows.
+        text = "40 42 46 -74 0 22"
+        ny_lat_first = coords.parse_point(text, "dms", crs, lat_first=True)
+        self.assertAlmostEqual(ny_lat_first.x(), -74.0061, places=3)
+        self.assertAlmostEqual(ny_lat_first.y(), 40.7128, places=3)
+        ny_lon_first = coords.parse_point(text, "dms", crs)
+        self.assertAlmostEqual(ny_lon_first.x(), 40.7128, places=3)
+        self.assertAlmostEqual(ny_lon_first.y(), -74.0061, places=3)
+        # An explicit hemisphere letter always wins, whichever order it's in.
+        lettered = coords.parse_point("40 42 46N 74 0 22W", "dms", crs)
+        self.assertAlmostEqual(lettered.x(), -74.0061, places=3)
+        self.assertAlmostEqual(lettered.y(), 40.7128, places=3)
 
     def test_hit_prefers_the_selected_feature(self):
         from keystone_under_test import canvas_menu as menu

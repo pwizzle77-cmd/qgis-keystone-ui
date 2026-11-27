@@ -185,8 +185,15 @@ def _parse_mgrs(text):
     return _transform(QgsPointXY(east, north), crs, WGS84)
 
 
-def parse_point(text, unit, map_crs):
-    """Point in ``map_crs`` from text typed in display ``unit``."""
+def parse_point(text, unit, map_crs, lat_first=False):
+    """Point in ``map_crs`` from text typed in display ``unit``.
+
+    ``lat_first`` breaks the tie only when NEITHER number carries a
+    hemisphere letter (an explicit N/S/E/W always wins): the status bar's
+    own coordinate box reads plain numbers as longitude first, matching
+    what it displays; Locate passes ``True`` to read them latitude first,
+    as Google Maps does.
+    """
     if unit in ("mgrs", "usng"):
         return _transform(_parse_mgrs(text), WGS84, map_crs)
     if unit == "utm":
@@ -204,7 +211,10 @@ def parse_point(text, unit, map_crs):
         x, y = (_float(re.sub(r"[^\d.,-]", "", v)) for v in (first, second))
         return QgsPointXY(x * factor, y * factor)
     (a, a_is_lat), (b, b_is_lat) = map(_parse_degrees, (first, second))
-    lon, lat = (b, a) if a_is_lat and not b_is_lat else (a, b)
+    if a_is_lat != b_is_lat:
+        lon, lat = (b, a) if a_is_lat else (a, b)
+    else:
+        lon, lat = (b, a) if lat_first else (a, b)
     if not (-180 <= lon <= 180 and -90 <= lat <= 90):
         raise ValueError(text)
     return _transform(QgsPointXY(lon, lat), WGS84, map_crs)
