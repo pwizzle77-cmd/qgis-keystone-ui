@@ -437,6 +437,20 @@ class KeystoneFixesTests(unittest.TestCase):
         self.assertAlmostEqual(lettered.x(), -74.0061, places=3)
         self.assertAlmostEqual(lettered.y(), 40.7128, places=3)
 
+    def test_format_and_parse_round_trip_every_coordinate_unit(self):
+        # format_point() and parse_point() must be inverses for every unit,
+        # so an ordering or band/column slip (as in the DMS swap above)
+        # shows up here even where nothing else exercises that unit.
+        crs = QgsCoordinateReferenceSystem("EPSG:4326")
+        point = QgsPointXY(-74.0061, 40.7128)  # New York
+        for unit in ("dd", "dms", "ddm", "mgrs", "usng", "utm"):
+            text = coords.format_point(point, unit, crs)
+            back = coords.parse_point(text, unit, crs)
+            self.assertAlmostEqual(back.x(), point.x(), places=2,
+                                   msg=f"{unit}: {text!r} -> {back.x()}")
+            self.assertAlmostEqual(back.y(), point.y(), places=2,
+                                   msg=f"{unit}: {text!r} -> {back.y()}")
+
     def test_hit_prefers_the_selected_feature(self):
         from keystone_under_test import canvas_menu as menu
         layer = self._polygon()
