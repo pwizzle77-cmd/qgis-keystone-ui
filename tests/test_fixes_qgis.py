@@ -451,6 +451,34 @@ class KeystoneFixesTests(unittest.TestCase):
             self.assertAlmostEqual(back.y(), point.y(), places=2,
                                    msg=f"{unit}: {text!r} -> {back.y()}")
 
+    def test_quick_access_toolbar_can_be_customized_and_is_kept(self):
+        from qgis.core import QgsSettings
+        settings = QgsSettings()
+        before = {key: (settings.contains(key), settings.value(key))
+                  for key in (ribbon.QAT_EXTRA_KEY, ribbon.QAT_REMOVED_KEY)}
+        settings.setValue(ribbon.QAT_EXTRA_KEY, "[]")
+        settings.setValue(ribbon.QAT_REMOVED_KEY, "[]")
+        try:
+            self.assertEqual(ribbon.effective_quick_access(), ribbon.QUICK_ACCESS)
+            # Add a tool that isn't a default: it lands at the end, kept in settings.
+            ribbon._toggle_quick_access("mActionIdentify", add=True)
+            self.assertEqual(ribbon.effective_quick_access(),
+                             ribbon.QUICK_ACCESS + ["|", "mActionIdentify"])
+            # Remove a default: it's gone, and no doubled-up separator is left behind.
+            ribbon._toggle_quick_access("mActionUndo", add=False)
+            after_remove = ribbon.effective_quick_access()
+            self.assertNotIn("mActionUndo", after_remove)
+            self.assertNotIn(["|", "|"], [after_remove[i:i + 2] for i in range(len(after_remove) - 1)])
+            # Adding it back clears the removal, restoring its original place.
+            ribbon._toggle_quick_access("mActionUndo", add=True)
+            self.assertEqual(ribbon.effective_quick_access(),
+                             ribbon.QUICK_ACCESS + ["|", "mActionIdentify"])
+            ribbon._toggle_quick_access("mActionIdentify", add=False)
+            self.assertEqual(ribbon.effective_quick_access(), ribbon.QUICK_ACCESS)
+        finally:
+            for key, (present, value) in before.items():
+                settings.setValue(key, value) if present else settings.remove(key)
+
     def test_hit_prefers_the_selected_feature(self):
         from keystone_under_test import canvas_menu as menu
         layer = self._polygon()

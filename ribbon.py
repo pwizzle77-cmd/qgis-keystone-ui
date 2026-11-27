@@ -17,6 +17,8 @@ logic, shortcuts and checked state stay in one place. Icon and caption
 changes go through :class:`~.util.Changes`, which reverts them.
 """
 
+import json
+
 from qgis.core import (
     Qgis, QgsMessageLog, QgsProject, QgsRasterLayer, QgsSettings, QgsVectorLayer,
 )
@@ -465,6 +467,72 @@ QUICK_ACCESS = ["mActionNewProject", "mActionOpenProject",
                 "mActionSaveProject", "fn:save_all", "mActionUndo", "mActionRedo",
                 "|", "mActionToggleEditing", "mActionSaveLayerEdits",
                 "|", "mActionSelectFeatures", "mActionDeselectAll"]
+# As in Pro, right-clicking any ribbon button offers to add or remove it
+# from the Quick Access Toolbar; the choice is kept across restarts.
+QAT_EXTRA_KEY = "keystone/quick_access_extra"      # user-added action names
+QAT_REMOVED_KEY = "keystone/quick_access_removed"  # QUICK_ACCESS names hidden
+
+
+def _qat_setting(key):
+    return json.loads(QgsSettings().value(key, "[]", type=str))
+
+
+def _set_qat_setting(key, names):
+    QgsSettings().setValue(key, json.dumps(names))
+
+
+def effective_quick_access():
+    """``QUICK_ACCESS``, minus what the user removed, plus what they added."""
+    removed = _qat_setting(QAT_REMOVED_KEY)
+    extra = _qat_setting(QAT_EXTRA_KEY)
+    names = []
+    for name in QUICK_ACCESS:
+        if name in removed:
+            continue
+        if name == "|" and (not names or names[-1] == "|"):
+            continue
+        names.append(name)
+    while names and names[-1] == "|":
+        names.pop()
+    if extra:
+        names += (["|"] if names else []) + extra
+    return names
+
+
+def _toggle_quick_access(name, add):
+    """Add or remove ``name`` (an action's object name), kept in settings."""
+    removed = _qat_setting(QAT_REMOVED_KEY)
+    extra = _qat_setting(QAT_EXTRA_KEY)
+    if add:
+        if name in removed:
+            _set_qat_setting(QAT_REMOVED_KEY, [n for n in removed if n != name])
+        if name not in QUICK_ACCESS and name not in extra:
+            _set_qat_setting(QAT_EXTRA_KEY, extra + [name])
+    elif name in QUICK_ACCESS:
+        if name not in removed:
+            _set_qat_setting(QAT_REMOVED_KEY, removed + [name])
+    elif name in extra:
+        _set_qat_setting(QAT_EXTRA_KEY, [n for n in extra if n != name])
+
+
+def _install_qat_menu(button, action, refresh):
+    """Right-click ``button``: add or remove ``action`` from the Quick
+    Access Toolbar. ``refresh`` re-renders the Quick Access row at once."""
+    button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
+    def show(pos):
+        name = action.objectName()
+        if not name:
+            return
+        in_qat = name in effective_quick_access()
+        menu = QMenu(button)
+        item = menu.addAction(
+            tr("Remove from Quick Access Toolbar") if in_qat
+            else tr("Add to Quick Access Toolbar"))
+        if menu.exec(button.mapToGlobal(pos)) is item:
+            _toggle_quick_access(name, add=not in_qat)
+            refresh()
+    button.customContextMenuRequested.connect(show)
 
 
 # --------------------------------------------------------------------------
@@ -646,23 +714,14 @@ class TitleRow(QWidget):
 
     def __init__(self, iface, changes, collapse_action, resolve=None):
         super().__init__(objectName="ArcSkinTitleRow")
-        win = iface.mainWindow()
+        self.win = iface.mainWindow()
+        win = self.win
+        self._resolve = resolve
+        self._qat_widgets = []
         row = QHBoxLayout(self)
         row.setContentsMargins(6, 2, 6, 2)
         row.setSpacing(2)
-        for name in QUICK_ACCESS:
-            if name == "|":
-                line = QFrame(objectName="ArcSkinRibbonSeparator")
-                line.setFrameShape(QFrame.Shape.VLine)
-                row.addWidget(line)
-                continue
-            action = resolve(name) if resolve else find_action(win, name)
-            if action:
-                button = QToolButton(autoRaise=True)
-                button.setDefaultAction(action)
-                button.setToolButtonStyle(
-                    Qt.ToolButtonStyle.ToolButtonIconOnly)
-                row.addWidget(button)
+        self.rebuild_quick_access()
         self.project = QLabel(objectName="ArcSkinProjectName")
         row.addWidget(self.project)
         row.addStretch(1)
@@ -688,6 +747,29 @@ class TitleRow(QWidget):
             signal.connect(self.show_project)
         changes.add(self.disconnect_project)
         self.show_project()
+
+    def rebuild_quick_access(self):
+        """(Re)build the Quick Access Toolbar part of the row from settings;
+        called once at start-up and again whenever it changes."""
+        row = self.layout()
+        for widget in self._qat_widgets:
+            row.removeWidget(widget)
+            widget.deleteLater()
+        self._qat_widgets = []
+        for name in effective_quick_access():
+            if name == "|":
+                widget = QFrame(objectName="ArcSkinRibbonSeparator")
+                widget.setFrameShape(QFrame.Shape.VLine)
+            else:
+                action = self._resolve(name) if self._resolve else find_action(self.win, name)
+                if action is None:
+                    continue
+                widget = QToolButton(autoRaise=True)
+                widget.setDefaultAction(action)
+                widget.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+                _install_qat_menu(widget, action, self.rebuild_quick_access)
+            row.insertWidget(len(self._qat_widgets), widget)
+            self._qat_widgets.append(widget)
 
     def disconnect_project(self):
         for signal in self._signals:
@@ -728,6 +810,7 @@ class Ribbon(QObject):
         self.hidden_docks = []
         self.explore_tool = None
         self.docker = None        # docked_tables.TableDocker, set by plugin
+        self.title_row = None     # TitleRow, set once build() makes it
         self.plugin_pages = []
         self._plugin_keeper = None
         self._registered_buttons = []
@@ -1120,6 +1203,10 @@ class Ribbon(QObject):
             return self.commands.get(name[3:])
         return find_action(self.win, name)
 
+    def _refresh_quick_access(self):
+        if self.title_row is not None and not sip.isdeleted(self.title_row):
+            self.title_row.rebuild_quick_access()
+
     def button(self, names, size, icon, caption):
         """Ribbon button for an item; None when nothing it names exists."""
         large = size == "L"
@@ -1166,6 +1253,7 @@ class Ribbon(QObject):
                 self.restyled.append(actions[0])
             button.setDefaultAction(actions[0])
             self.placed.extend(actions)
+            _install_qat_menu(button, actions[0], self._refresh_quick_access)
         elif menu:
             button.setText(caption)
             button.setIcon(pro_icon(icon))
@@ -1436,8 +1524,8 @@ class Ribbon(QObject):
         stack = QVBoxLayout(frame)
         stack.setContentsMargins(0, 0, 0, 0)
         stack.setSpacing(0)
-        title = TitleRow(self.iface, self.changes,
-                         self.commands["collapse_ribbon"], self.resolve)
+        title = self.title_row = TitleRow(self.iface, self.changes,
+                                          self.commands["collapse_ribbon"], self.resolve)
         stack.addWidget(title)
         stack.addWidget(tabs)
         ribbon.addWidget(frame)
