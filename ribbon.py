@@ -463,7 +463,8 @@ PROJECT_MENU = [
 # Quick Access Toolbar, as in Pro's title row, with the editing essentials.
 QUICK_ACCESS = ["mActionNewProject", "mActionOpenProject",
                 "mActionSaveProject", "fn:save_all", "mActionUndo", "mActionRedo",
-                "|", "mActionToggleEditing", "mActionSaveLayerEdits"]
+                "|", "mActionToggleEditing", "mActionSaveLayerEdits",
+                "|", "mActionSelectFeatures", "mActionDeselectAll"]
 
 
 # --------------------------------------------------------------------------
